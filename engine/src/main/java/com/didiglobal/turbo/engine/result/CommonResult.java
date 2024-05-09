@@ -5,6 +5,9 @@ import com.google.common.base.MoreObjects;
 
 public class CommonResult {
 
+    /**
+     * @see ErrorEnum
+     */
     private int errCode;
     private String errMsg;
 
