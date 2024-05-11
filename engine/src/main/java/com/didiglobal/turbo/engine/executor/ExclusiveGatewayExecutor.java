@@ -56,7 +56,7 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
         }
 
         // 3.invoke hook and get data result
-        Map<String, InstanceData> hookInfoValueMap = getHookInfoValueMap(runtimeContext.getFlowInstanceId(), hookInfoParam, runtimeContext.getCurrentNodeInstance().getNodeKey(), runtimeContext.getCurrentNodeInstance().getNodeInstanceId());
+        Map<String, InstanceData> hookInfoValueMap = getHookInfoValueMap(runtimeContext.getFlowInstanceId(), hookInfoParam, runtimeContext.getCurrentNodeInstance().getNodeKey(), runtimeContext.getCurrentNodeInstance().getNodeInstanceId(), runtimeContext.getInstanceDataMap());
         LOGGER.info("doExecute getHookInfoValueMap.||hookInfoValueMap={}", hookInfoValueMap);
         if (MapUtils.isEmpty(hookInfoValueMap)) {
             LOGGER.warn("doExecute: hookInfoValueMap is empty.||flowInstanceId={}||hookInfoParam={}||nodeKey={}",
@@ -75,11 +75,11 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
         }
     }
 
-    private Map<String, InstanceData> getHookInfoValueMap(String flowInstanceId, String hookInfoParam, String nodeKey, String nodeInstanceId) {
+    private Map<String, InstanceData> getHookInfoValueMap(String flowInstanceId, String hookInfoParam, String nodeKey, String nodeInstanceId, Map<String, InstanceData> instanceDataMap) {
         List<InstanceData> dataList = Lists.newArrayList();
         for (HookService service : hookServices) {
             try {
-                List<InstanceData> list = service.invoke(flowInstanceId, hookInfoParam, nodeKey, nodeInstanceId);
+                List<InstanceData> list = service.invoke(flowInstanceId, hookInfoParam, nodeKey, nodeInstanceId, instanceDataMap);
                 if (CollectionUtils.isEmpty(list)) {
                     LOGGER.warn("hook service invoke result is empty, serviceName={}, flowInstanceId={}, hookInfoParam={}",
                         service.getClass().getName(), flowInstanceId, hookInfoParam);

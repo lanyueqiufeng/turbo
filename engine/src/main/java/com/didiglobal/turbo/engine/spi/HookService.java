@@ -3,6 +3,7 @@ package com.didiglobal.turbo.engine.spi;
 import com.didiglobal.turbo.engine.model.InstanceData;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p> HookService </p>
@@ -21,7 +22,8 @@ public interface HookService {
      * @param nodeInstanceId running node's instance id
      * @param nodeKey        running node's key
      * @param hookInfoParam  some info , you can refresh
+     * @param instanceDataMap instanceData
      * @return new infos
      */
-    List<InstanceData> invoke(String flowInstanceId, String nodeInstanceId, String nodeKey, String hookInfoParam);
+    List<InstanceData> invoke(String flowInstanceId, String hookInfoParam, String nodeKey, String nodeInstanceId, Map<String, InstanceData> instanceDataMap);
 }
