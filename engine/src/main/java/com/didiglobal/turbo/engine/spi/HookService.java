@@ -1,9 +1,9 @@
 package com.didiglobal.turbo.engine.spi;
 
+import com.didiglobal.turbo.engine.common.RuntimeContext;
 import com.didiglobal.turbo.engine.model.InstanceData;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * <p> HookService </p>
@@ -17,13 +17,8 @@ public interface HookService {
     /**
      * Invoke hook service, used to perform data refresh operations on the gateway node.
      * Usage: Implement the interface and give the instance to Spring for management
-     *
-     * @param flowInstanceId runtime flow instance id
-     * @param nodeInstanceId running node's instance id
-     * @param nodeKey        running node's key
-     * @param hookInfoParam  some info , you can refresh
-     * @param instanceDataMap instanceData
+     * @param runtimeContext 运行时上下文
      * @return new infos
      */
-    List<InstanceData> invoke(String flowInstanceId, String hookInfoParam, String nodeKey, String nodeInstanceId, Map<String, InstanceData> instanceDataMap);
+    List<InstanceData> invoke(RuntimeContext runtimeContext);
 }

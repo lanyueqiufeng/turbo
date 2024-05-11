@@ -12,9 +12,7 @@ import com.didiglobal.turbo.engine.spi.HookService;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
 import com.google.common.collect.Lists;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -23,7 +21,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -51,12 +48,12 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
         String hookInfoParam = FlowModelUtil.getHookInfos(flowElement);
 
         // 2.ignore while properties is empty
-        if (StringUtils.isBlank(hookInfoParam)) {
-            return;
-        }
+        // if (StringUtils.isBlank(hookInfoParam)) {
+        //     return;
+        // }
 
         // 3.invoke hook and get data result
-        Map<String, InstanceData> hookInfoValueMap = getHookInfoValueMap(runtimeContext.getFlowInstanceId(), hookInfoParam, runtimeContext.getCurrentNodeInstance().getNodeKey(), runtimeContext.getCurrentNodeInstance().getNodeInstanceId(), runtimeContext.getInstanceDataMap());
+        Map<String, InstanceData> hookInfoValueMap = getHookInfoValueMap(runtimeContext);
         LOGGER.info("doExecute getHookInfoValueMap.||hookInfoValueMap={}", hookInfoValueMap);
         if (MapUtils.isEmpty(hookInfoValueMap)) {
             LOGGER.warn("doExecute: hookInfoValueMap is empty.||flowInstanceId={}||hookInfoParam={}||nodeKey={}",
@@ -75,19 +72,15 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
         }
     }
 
-    private Map<String, InstanceData> getHookInfoValueMap(String flowInstanceId, String hookInfoParam, String nodeKey, String nodeInstanceId, Map<String, InstanceData> instanceDataMap) {
+    private Map<String, InstanceData> getHookInfoValueMap(RuntimeContext runtimeContext) {
         List<InstanceData> dataList = Lists.newArrayList();
         for (HookService service : hookServices) {
             try {
-                List<InstanceData> list = service.invoke(flowInstanceId, hookInfoParam, nodeKey, nodeInstanceId, instanceDataMap);
-                if (CollectionUtils.isEmpty(list)) {
-                    LOGGER.warn("hook service invoke result is empty, serviceName={}, flowInstanceId={}, hookInfoParam={}",
-                        service.getClass().getName(), flowInstanceId, hookInfoParam);
-                }
+                List<InstanceData> list = service.invoke(runtimeContext);
                 dataList.addAll(list);
             } catch (Exception e) {
-                LOGGER.warn("hook service invoke fail, serviceName={}, flowInstanceId={}, hookInfoParam={}",
-                    service.getClass().getName(), flowInstanceId, hookInfoParam);
+                LOGGER.warn("hook service invoke fail, serviceName={}, runtimeContext={}",
+                    service.getClass().getName(), runtimeContext);
             }
         }
         return InstanceDataUtil.getInstanceDataMap(dataList);
