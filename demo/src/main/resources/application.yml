@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driverClassName: com.mysql.jdbc.Driver
+    url: jdbc:mysql://192.168.85.45:10306/chat_robot_guangdong?allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: chat_robot_guangdong
+    password: gdX2csJVTqFG^PSX
+logging:
+  config: classpath:logback-spring.xml
