@@ -23,6 +23,17 @@ public class GroovyUtil {
     private GroovyUtil() {
     }
 
+    /**
+     * 清理全部的Groovy脚本缓存Class
+     */
+    public static void removeAllFunction() {
+        LOGGER.info(">>>>>>>>>>>>>>>执行分支条件Groovy编译缓存清理<<<<<<<<<<<<<<");
+        for (String key : SCRIPT_CLASS_CACHE.keySet()) {
+            LOGGER.info("已清理 key：{}", key);
+            SCRIPT_CLASS_CACHE.remove(key);
+        }
+    }
+
     public static Object execute(String expression, Map<String, Object> dataMap) throws Exception {
         if (StringUtils.isBlank(expression)) {
             LOGGER.warn("calculate: expression is empty");
