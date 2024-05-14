@@ -1,35 +1,82 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration debug="false">
-    <!--定义日志文件的存储地址 勿在 LogBack 的配置中使用相对路径-->
-    <property name="LOG_HOME" value="./logs"/>
-    <!-- 控制台输出 -->
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符-->
-            <pattern>
-                [%level][%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}][%logger:%L][%thread]||traceid=%X{X-B3-TraceId:-}||%msg%n
-            </pattern>
-        </encoder>
-    </appender>
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!--日志文件输出的文件名-->
-            <FileNamePattern>${LOG_HOME}/turbo.demo.log.%d{yyyyMMddHH}</FileNamePattern>
-            <!--日志文件保留数量-->
-            <MaxHistory>240</MaxHistory>
-        </rollingPolicy>
-        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符-->
-            <pattern>
-                [%level][%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}][%logger:%L][%thread]||traceid=%X{X-B3-TraceId:-}||%msg%n
-            </pattern>
+<configuration>
+    <!--
+        可在 application-xx.yml 文件中配置 logback.path 覆盖默认值
+    -->
+    <springProperty scope="context" name="LOG_PATH" source="logback.path" defaultValue="logs"/>
+
+    <!--  设置控制台颜色  -->
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="wex"
+                    converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+    <conversionRule conversionWord="wEx"
+                    converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
+
+    <!--  定义控制台和文件记录的日志格式，用于开发使用  -->
+    <property name="CONSOLE_LOG_PATTERN"
+              value="${CONSOLE_LOG_PATTERN:-%clr(%d{${LOG_DATEFORMAT_PATTERN:-yyyy-MM-dd HH:mm:ss.SSS}}){faint} %X{traceId:-} [%thread] %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %L %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}"/>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
-    <logger name="org.springframework" level="INFO"/>
-    <!-- 日志输出级别 -->
-    <root level="INFO">
-        <appender-ref ref="STDOUT"/>
+
+    <!--  定义日志文件的日志格式，用于生产使用  -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 追加日志到原文件结尾 -->
+        <Prudent>true</Prudent>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度 %method 方法名  %L 行数 %msg：日志消息，%n是换行符-->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %X{traceId:-} [%thread] %-5level %logger{56}.%method:%L - %msg%n</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!--日志文件名称定义，其中 %i 表示当前日志文件超过 maxFileSize 设置的值时进行文件切割的序号，从0开始，如 0、1、2、3、4...-->
+            <FileNamePattern>${LOG_PATH}/%d{yyyy-MM-dd}.%i.log</FileNamePattern>
+            <!--日志文件保留天数，超过该时间的日志将被自动清除-->
+            <MaxHistory>30</MaxHistory>
+            <!-- 每个日志文件的最大值，超过该值后，日志文件自动被切割，并且新的文件按照 FileNamePattern 设置的格式命名 -->
+            <maxFileSize>20MB</maxFileSize>
+            <!-- 所有的日志文件加起来总和不能超过该值，如果超过了，那么会先删除时间最旧的日志文件 -->
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- 异步日志打印，可以提高系统TPS，默认是同步打印-->
+    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="FILE"/>
+        <!--    解决异步打印时class行号不打印问题    -->
+        <includeCallerData>true</includeCallerData>
+        <!--    日志队列大小，默认 256    -->
+        <queueSize>1000</queueSize>
+    </appender>
+
+    <!--  默认的一些包日志级别设置  -->
+    <logger name="org.apache.catalina.startup.DigesterFactory" level="ERROR"/>
+    <logger name="org.apache.catalina.util.LifecycleBase" level="ERROR"/>
+    <logger name="org.apache.coyote.http11.Http11NioProtocol" level="WARN"/>
+    <logger name="org.apache.sshd.common.util.SecurityUtils" level="WARN"/>
+    <logger name="org.apache.tomcat.util.net.NioSelectorPool" level="WARN"/>
+    <logger name="org.eclipse.jetty.util.component.AbstractLifeCycle" level="ERROR"/>
+    <logger name="org.hibernate.validator.internal.util.Version" level="WARN"/>
+
+    <!-- 开发、测试环境日志级别配置，通过 spring.profiles.active 值判断 -->
+    <springProfile name="dev,test">
+        <logger name="org.springframework.web" level="INFO"></logger>
+        <logger name="org.springboot.sample" level="INFO"></logger>
+        <logger name="com.gccloud" level="INFO"></logger>
+    </springProfile>
+
+    <!-- 生产环境日志级别配置，通过 spring.profiles.active 值判断 -->
+    <springProfile name="prod">
+        <logger name="org.springframework.web" level="ERROR"></logger>
+        <logger name="org.springboot.sample" level="ERROR"></logger>
+        <logger name="com.gccloud" level="INFO"></logger>
+    </springProfile>
+
+    <root level="INFO">
+        <appender-ref ref="ASYNC"/>
+        <appender-ref ref="CONSOLE"/>
     </root>
 </configuration>
