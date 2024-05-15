@@ -11,7 +11,6 @@ import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.exception.ReentrantException;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
-import com.didiglobal.turbo.engine.service.FlowInstanceService;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
 import com.google.common.collect.Lists;
@@ -28,7 +27,6 @@ import javax.annotation.Resource;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 public class FlowExecutor extends RuntimeExecutor {
@@ -124,6 +122,7 @@ public class FlowExecutor extends RuntimeExecutor {
         BeanUtils.copyProperties(flowInstancePO, instanceDataPO);
 
         // generate instanceDataId
+        instanceDataPO.setId(null);
         instanceDataPO.setInstanceDataId(genId());
         instanceDataPO.setInstanceData(InstanceDataUtil.getInstanceDataListStr(instanceDataMap));
 
