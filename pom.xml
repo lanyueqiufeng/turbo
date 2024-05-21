@@ -146,8 +146,8 @@
 
     <distributionManagement>
         <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <id>owner-public</id>
+            <url>http://ding.nas.timetap.cn:18081/repository/maven-snapshots/</url>
         </repository>
     </distributionManagement>
 
