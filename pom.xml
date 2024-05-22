@@ -6,7 +6,7 @@
     <groupId>com.didiglobal.turbo</groupId>
     <artifactId>turbo</artifactId>
     <packaging>pom</packaging>
-    <version>1.1.1</version>
+    <version>1.1.1.chat.flow-SNAPSHOT</version>
     <name>turbo</name>
     <description>Turbo is a light-weight flow engine framework, support BPMN2.0</description>
     <url>https://www.github.com/didi/turbo</url>
@@ -146,22 +146,22 @@
 
     <distributionManagement>
         <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <id>owner-public</id>
+            <url>http://ding.nas.timetap.cn:18081/repository/maven-snapshots/</url>
         </repository>
     </distributionManagement>
 
-    <profiles>
-        <profile>
-            <id>java8-doclint-disabled</id>
-            <activation>
-                <jdk>[1.8,)</jdk>
-            </activation>
-            <properties>
-                <javadoc.opts>-Xdoclint:none</javadoc.opts>
-            </properties>
-        </profile>
-    </profiles>
+    <!--<profiles>-->
+    <!--    <profile>-->
+    <!--        <id>java8-doclint-disabled</id>-->
+    <!--        <activation>-->
+    <!--            <jdk>[1.8,)</jdk>-->
+    <!--        </activation>-->
+    <!--        <properties>-->
+    <!--            <javadoc.opts>-Xdoclint:none</javadoc.opts>-->
+    <!--        </properties>-->
+    <!--    </profile>-->
+    <!--</profiles>-->
 
     <build>
         <plugins>
