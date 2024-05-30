@@ -14,29 +14,48 @@ public enum ErrorEnum {
     FLOW_NESTED_DEAD_LOOP(2003, "Flow nested dead loop"),
 
     //3000~3999 流程定义错误
-    DEFINITION_INSERT_INVALID(3001, "Definition insert failed"),
-    DEFINITION_UPDATE_INVALID(3002, "Definition update failed"),
+    DEFINITION_INSERT_INVALID(3001, "数据库插入失败"),
+    DEFINITION_UPDATE_INVALID(3002, "数据库更新失败"),
 
-    FLOW_NOT_EXIST(3101, "Flow not exist"),
-    FLOW_NOT_EDITING(3102, "Flow not editing status"),
+    // Flow not exist
+    FLOW_NOT_EXIST(3101, "流程不存在"),
+    // Flow not editing status
+    FLOW_NOT_EDITING(3102, "流程不是编辑状态"),
 
-    MODEL_EMPTY(3201, "Empty model"),
-    START_NODE_INVALID(3202, "Zero or more than one start node"),
-    ELEMENT_KEY_NOT_UNIQUE(3203, "Element key not unique"),
-    END_NODE_INVALID(3204, "No end node"),
-    MODEL_NOT_UNICOM(3205, "Not unicom"),
-    SEQUENCE_BELONG_TO_MULTI_PAIR_NODE(3206, "Sequence belong to multi pair node"),
-    RING_WRONG(3207, "Ring wrong"),
-    GATEWAY_NO_OUTGOING(3208, "Gateway no outgoing"),
-    EMPTY_SEQUENCE_OUTGOING(3209, "Empty sequence outgoing"),
-    TOO_MANY_DEFAULT_SEQUENCE(3210, "Too many default sequence"),
-    MODEL_UNKNOWN_ELEMENT_KEY(3211, "Unknown element key"),
-    ELEMENT_TOO_MUCH_INCOMING(3212, "Too many incoming"),
-    ELEMENT_TOO_MUCH_OUTGOING(3213, "Too many outgoing"),
-    ELEMENT_LACK_INCOMING(3214, "Element lack incoming"),
-    ELEMENT_LACK_OUTGOING(3215, "Element lack outgoing"),
-    REQUIRED_ELEMENT_ATTRIBUTES(3216, "required element attributes"),
-    MODEL_UNKNOWN_ELEMENT_VALUE(3217, "Unknown element value"),
+    // Empty model
+    MODEL_EMPTY(3201, "模型为空"),
+    // Zero or more than one start node
+    START_NODE_INVALID(3202, "流程必须有且仅有一个开始节点"),
+    // Element key not unique
+    ELEMENT_KEY_NOT_UNIQUE(3203, "流程元素key必须唯一"),
+    // No end node
+    END_NODE_INVALID(3204, "流程至少需要有一个结束节点"),
+    // Not unicom
+    MODEL_NOT_UNICOM(3205, "该流程从开始节点不能到底每一个节点"),
+    // Sequence belong to multi pair node
+    SEQUENCE_BELONG_TO_MULTI_PAIR_NODE(3206, "边应该属于一个入口节点和一个出口节点"),
+    // Ring wrong
+    RING_WRONG(3207, "流程中环结构中必须至少包含一个用户节点"),
+    // Gateway no outgoing
+    GATEWAY_NO_OUTGOING(3208, "解析环节应该至少有一条出口"),
+    // Empty sequence outgoing
+    EMPTY_SEQUENCE_OUTGOING(3209, "解析环节条件分支除默认分支外均需要配置条件表达式"),
+    // Too many default sequence
+    TOO_MANY_DEFAULT_SEQUENCE(3210, "解析环节最多只能有一条默认分支"),
+    // Unknown element key
+    MODEL_UNKNOWN_ELEMENT_KEY(3211, "不支持该类型"),
+    //Too many incoming
+    ELEMENT_TOO_MUCH_INCOMING(3212, "非条件判断节点以及起始节点外，其他节点有且仅有一个出口"),
+    // Too many outgoing
+    ELEMENT_TOO_MUCH_OUTGOING(3213, "太多的出口分支"),
+    // Element lack incoming
+    ELEMENT_LACK_INCOMING(3214, "元素缺少入口"),
+    //Element lack outgoing
+    ELEMENT_LACK_OUTGOING(3215, "元素缺少出口"),
+    // required element attributes
+    REQUIRED_ELEMENT_ATTRIBUTES(3216, "缺少节点必要的属性"),
+    // Unknown element value
+    MODEL_UNKNOWN_ELEMENT_VALUE(3217, "不识别的流程属性值"),
 
     //4000~4999 流程执行错误
     COMMIT_FAILED(4001, "Commit task failed"),
