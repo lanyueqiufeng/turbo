@@ -18,6 +18,15 @@ public class Constants {
         public static final String CALL_ACTIVITY_IN_PARAM = "callActivityInParam";
         public static final String CALL_ACTIVITY_OUT_PARAM_TYPE = "callActivityOutParamType";
         public static final String CALL_ACTIVITY_OUT_PARAM = "callActivityOutParam";
+        /**
+         * 环节内脚本信息
+         */
+        public static final String GROOVY_SCRIPT = "script";
+
+        /**
+         * 环节更新时间
+         */
+        public static final String UPDATE_TIME = "updateTime";
     }
 
     public static final class CALL_ACTIVITY_PARAM_TYPE {
