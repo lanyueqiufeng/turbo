@@ -75,13 +75,13 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
     private Map<String, InstanceData> getHookInfoValueMap(RuntimeContext runtimeContext) {
         List<InstanceData> dataList = Lists.newArrayList();
         for (HookService service : hookServices) {
-            try {
-                List<InstanceData> list = service.invoke(runtimeContext);
-                dataList.addAll(list);
-            } catch (Exception e) {
-                LOGGER.warn("hook service invoke fail, serviceName={}, runtimeContext={}",
-                    service.getClass().getName(), runtimeContext);
-            }
+            // try {
+            List<InstanceData> list = service.invoke(runtimeContext);
+            dataList.addAll(list);
+            // } catch (Exception e) {
+            //     LOGGER.warn("hook service invoke fail, serviceName={}, runtimeContext={}",
+            //         service.getClass().getName(), runtimeContext);
+            // }
         }
         return InstanceDataUtil.getInstanceDataMap(dataList);
     }
