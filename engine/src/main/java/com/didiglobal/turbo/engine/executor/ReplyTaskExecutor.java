@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ public class ReplyTaskExecutor extends ElementExecutor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReplyTaskExecutor.class);
 
+    @Resource
     private ReplyNodeHookService hookService;
 
     /**
