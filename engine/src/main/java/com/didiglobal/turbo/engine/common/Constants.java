@@ -38,6 +38,12 @@ public class Constants {
          */
         public static final String REPLY_TYPE = "replyType";
 
+        /**
+         * 配置化内容
+         */
+        public static final String FIXED_CONTENT = "fixedContent";
+
+
     }
 
     public static final class CALL_ACTIVITY_PARAM_TYPE {
