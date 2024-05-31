@@ -36,6 +36,9 @@ public class ElementValidatorFactory {
     @Resource
     private CallActivityValidator callActivityValidator;
 
+    @Resource
+    private ReplyNodeValidator replyTaskValidator;
+
     public ElementValidator getElementValidator(FlowElement flowElement) throws ProcessException {
         int elementType = flowElement.getType();
         ElementValidator elementValidator = getElementValidator(elementType);
@@ -63,6 +66,8 @@ public class ElementValidatorFactory {
                 return exclusiveGatewayValidator;
             case FlowElementType.CALL_ACTIVITY:
                 return callActivityValidator;
+            case FlowElementType.REPLY_NODE:
+                return replyTaskValidator;
             default:
                 return null;
         }

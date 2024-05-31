@@ -37,6 +37,10 @@ public class ExecutorFactory {
     private ExclusiveGatewayExecutor exclusiveGatewayExecutor;
 
     @Resource
+    private ReplyTaskExecutor replyTaskExecutor;
+
+
+    @Resource
     private SyncSingleCallActivityExecutor syncSingleCallActivityExecutor;
 
     public ElementExecutor getElementExecutor(FlowElement flowElement) throws ProcessException {
@@ -67,6 +71,8 @@ public class ExecutorFactory {
                 return exclusiveGatewayExecutor;
             case FlowElementType.CALL_ACTIVITY:
                 return getCallActivityExecutor(flowElement);
+            case FlowElementType.REPLY_NODE:
+                return replyTaskExecutor;
             default:
                 return null;
         }

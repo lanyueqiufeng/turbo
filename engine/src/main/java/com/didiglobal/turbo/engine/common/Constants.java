@@ -27,6 +27,17 @@ public class Constants {
          * 环节更新时间
          */
         public static final String UPDATE_TIME = "updateTime";
+
+        /**
+         * 解析环节的处理类型key
+         */
+        public static final String RESOLVE_TYPE = "resolveType";
+
+        /**
+         * 回复环节的回复类型key
+         */
+        public static final String REPLY_TYPE = "replyType";
+
     }
 
     public static final class CALL_ACTIVITY_PARAM_TYPE {
