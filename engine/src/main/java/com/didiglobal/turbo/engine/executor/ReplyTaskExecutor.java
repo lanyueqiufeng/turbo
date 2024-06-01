@@ -11,9 +11,12 @@ import com.didiglobal.turbo.engine.model.InstanceData;
 import com.didiglobal.turbo.engine.spi.ReplyNodeHookService;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -22,12 +25,14 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class ReplyTaskExecutor extends ElementExecutor {
+public class ReplyTaskExecutor extends ElementExecutor implements InitializingBean {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReplyTaskExecutor.class);
 
     @Resource
-    private ReplyNodeHookService hookService;
+    private ApplicationContext applicationContext;
+
+    private ReplyNodeHookService replyNodeHookService;
 
     /**
      * Update data map: invoke hook service to update data map
@@ -52,7 +57,7 @@ public class ReplyTaskExecutor extends ElementExecutor {
     }
 
     private Map<String, InstanceData> getHookInfoValueMap(RuntimeContext runtimeContext) {
-        List<InstanceData> list = hookService.invoke(runtimeContext);
+        List<InstanceData> list = replyNodeHookService.invoke(runtimeContext);
         return InstanceDataUtil.getInstanceDataMap(list);
     }
 
@@ -107,5 +112,30 @@ public class ReplyTaskExecutor extends ElementExecutor {
         LOGGER.info("getExecuteExecutor.||nextNode={}||runtimeContext={}", nextNode, runtimeContext);
         runtimeContext.setCurrentNodeModel(nextNode);
         return executorFactory.getElementExecutor(nextNode);
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        ensureHookService();
+    }
+
+    private void ensureHookService() {
+        if (replyNodeHookService != null) {
+            return;
+        }
+        // init hook services by Spring application context
+        synchronized (ReplyTaskExecutor.class) {
+            if (replyNodeHookService != null) {
+                return;
+            }
+            String[] names = applicationContext.getBeanNamesForType(ReplyNodeHookService.class);
+            if (ObjectUtils.isNotEmpty(names)) {
+                Object bean = applicationContext.getBean(names[0]);
+                if (bean != null) {
+                    replyNodeHookService = (ReplyNodeHookService) bean;
+                }
+            }
+
+        }
     }
 }
