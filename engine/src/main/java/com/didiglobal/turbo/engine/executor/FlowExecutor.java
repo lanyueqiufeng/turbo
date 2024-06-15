@@ -47,8 +47,13 @@ public class FlowExecutor extends RuntimeExecutor {
         } catch (ProcessException pe) {
             if (!ErrorEnum.isSuccess(pe.getErrNo())) {
                 processStatus = ProcessStatus.FAILED;
+                processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
             }
             throw pe;
+        } catch (Exception e) {
+            processStatus = ProcessStatus.FAILED;
+            processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
+            throw e;
         } finally {
             runtimeContext.setProcessStatus(processStatus);
             postExecute(runtimeContext);
@@ -207,8 +212,13 @@ public class FlowExecutor extends RuntimeExecutor {
         } catch (ProcessException pe) {
             if (!ErrorEnum.isSuccess(pe.getErrNo())) {
                 processStatus = ProcessStatus.FAILED;
+                processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
             }
             throw pe;
+        } catch (Exception e) {
+            processStatus = ProcessStatus.FAILED;
+            processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
+            throw e;
         } finally {
             runtimeContext.setProcessStatus(processStatus);
             postCommit(runtimeContext);
@@ -354,8 +364,13 @@ public class FlowExecutor extends RuntimeExecutor {
         } catch (ProcessException pe) {
             if (!ErrorEnum.isSuccess(pe.getErrNo())) {
                 processStatus = ProcessStatus.FAILED;
+                processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
             }
             throw pe;
+        }  catch (Exception e) {
+            processStatus = ProcessStatus.FAILED;
+            processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
+            throw e;
         } finally {
             runtimeContext.setProcessStatus(processStatus);
             postRollback(runtimeContext);
