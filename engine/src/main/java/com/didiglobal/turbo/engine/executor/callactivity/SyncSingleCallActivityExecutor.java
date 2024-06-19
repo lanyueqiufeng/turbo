@@ -2,22 +2,10 @@ package com.didiglobal.turbo.engine.executor.callactivity;
 
 import com.didiglobal.turbo.engine.bo.NodeInstance;
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
-import com.didiglobal.turbo.engine.common.Constants;
-import com.didiglobal.turbo.engine.common.ErrorEnum;
-import com.didiglobal.turbo.engine.common.FlowElementType;
-import com.didiglobal.turbo.engine.common.FlowInstanceMappingType;
-import com.didiglobal.turbo.engine.common.FlowInstanceStatus;
-import com.didiglobal.turbo.engine.common.NodeInstanceStatus;
-import com.didiglobal.turbo.engine.common.RuntimeContext;
-import com.didiglobal.turbo.engine.entity.FlowDeploymentPO;
-import com.didiglobal.turbo.engine.entity.FlowInstanceMappingPO;
-import com.didiglobal.turbo.engine.entity.FlowInstancePO;
-import com.didiglobal.turbo.engine.entity.InstanceDataPO;
-import com.didiglobal.turbo.engine.entity.NodeInstancePO;
+import com.didiglobal.turbo.engine.common.*;
+import com.didiglobal.turbo.engine.entity.*;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.exception.SuspendException;
-import com.didiglobal.turbo.engine.exception.TurboException;
-import com.didiglobal.turbo.engine.executor.ElementExecutor;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
 import com.didiglobal.turbo.engine.param.CommitTaskParam;
@@ -307,6 +295,7 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
                 handleSuccessSubFlowResult(runtimeContext, runtimeResult);
                 break;
             case COMMIT_SUSPEND:
+                handleCommitSuspendFlowResult(runtimeContext, runtimeResult);
             case ROLLBACK_SUSPEND:
                 runtimeContext.getCurrentNodeInstance().setStatus(NodeInstanceStatus.ACTIVE);
                 runtimeContext.setCallActivityRuntimeResultList(Arrays.asList(runtimeResult));
@@ -343,5 +332,20 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         runtimeContext.setInstanceDataId(instanceDataId);
         // 3.set currentNode completed
         currentNodeInstance.setInstanceDataId(runtimeContext.getInstanceDataId());
+    }
+
+    private void handleCommitSuspendFlowResult(RuntimeContext runtimeContext, RuntimeResult runtimeResult) throws ProcessException {
+        NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
+        LOGGER.warn(String.valueOf(runtimeResult.getStatus()));
+        if (runtimeResult.getStatus() == FlowInstanceStatus.TERMINATED) {
+            // The subFlow rollback from the StartNode to the MainFlow
+            currentNodeInstance.setStatus(NodeInstanceStatus.DISABLED);
+            flowInstanceMappingDAO.updateType(runtimeContext.getFlowInstanceId(), currentNodeInstance.getNodeInstanceId(), FlowInstanceMappingType.TERMINATED);
+        } else if (runtimeResult.getStatus() == FlowInstanceStatus.RUNNING) {
+            Map<String, InstanceData> instanceDataFromSubFlow = InstanceDataUtil.getInstanceDataMap(runtimeResult.getVariables());
+            // merge to current data
+            Map<String, InstanceData> currentInstanceDataMap = runtimeContext.getInstanceDataMap();
+            currentInstanceDataMap.putAll(instanceDataFromSubFlow);
+        }
     }
 }
