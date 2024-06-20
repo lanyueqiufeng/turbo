@@ -53,8 +53,8 @@ public abstract class AbstractCallActivityExecutor extends ElementExecutor {
         Map<String, InstanceData> instanceDataFromMainFlowMap = InstanceDataUtil.getInstanceDataMap(instanceDataFromMainFlow);
 
         Map<String, InstanceData> allInstanceData = new HashMap<>();
-        allInstanceData.putAll(callActivityInitDataMap);
         allInstanceData.putAll(instanceDataFromMainFlowMap);
+        allInstanceData.putAll(callActivityInitDataMap);
         return InstanceDataUtil.getInstanceDataList(allInstanceData);
     }
 
