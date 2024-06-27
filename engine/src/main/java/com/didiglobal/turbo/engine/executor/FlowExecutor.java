@@ -52,7 +52,7 @@ public class FlowExecutor extends RuntimeExecutor {
             throw pe;
         } catch (Exception e) {
             processStatus = ProcessStatus.FAILED;
-            processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
+            processInstanceDAO.updateErrorMsg(runtimeContext.getFlowInstanceId(), e);
             throw e;
         } finally {
             runtimeContext.setProcessStatus(processStatus);
@@ -217,7 +217,7 @@ public class FlowExecutor extends RuntimeExecutor {
             throw pe;
         } catch (Exception e) {
             processStatus = ProcessStatus.FAILED;
-            processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
+            processInstanceDAO.updateErrorMsg(runtimeContext.getFlowInstanceId(), e);
             throw e;
         } finally {
             runtimeContext.setProcessStatus(processStatus);
@@ -369,7 +369,7 @@ public class FlowExecutor extends RuntimeExecutor {
             throw pe;
         }  catch (Exception e) {
             processStatus = ProcessStatus.FAILED;
-            processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
+            processInstanceDAO.updateErrorMsg(runtimeContext.getFlowInstanceId(), e);
             throw e;
         } finally {
             runtimeContext.setProcessStatus(processStatus);

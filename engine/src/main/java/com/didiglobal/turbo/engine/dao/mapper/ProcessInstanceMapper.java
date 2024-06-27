@@ -14,4 +14,8 @@ public interface ProcessInstanceMapper extends BaseMapper<FlowInstancePO> {
     @Update("UPDATE ei_flow_instance SET status=#{status}, modify_time=#{modifyTime} " +
         "WHERE flow_instance_id=#{flowInstanceId}")
     void updateStatus(FlowInstancePO entity);
+
+    @Update("UPDATE ei_flow_instance SET status=#{status}, modify_time=#{modifyTime} ,error_msg=#{errorMsg}" +
+            "WHERE flow_instance_id=#{flowInstanceId}")
+    void updateErrorMsg(FlowInstancePO entity);
 }

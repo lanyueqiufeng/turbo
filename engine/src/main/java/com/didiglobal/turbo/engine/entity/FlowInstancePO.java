@@ -12,6 +12,7 @@ public class FlowInstancePO extends CommonPO {
     private String parentFlowInstanceId;
     private Integer status;
     private Date modifyTime;
+    private String errorMsg;
 
     public String getFlowInstanceId() {
         return flowInstanceId;
@@ -59,5 +60,13 @@ public class FlowInstancePO extends CommonPO {
 
     public void setModifyTime(Date modifyTime) {
         this.modifyTime = modifyTime;
+    }
+
+    public String getErrorMsg() {
+        return errorMsg;
+    }
+
+    public void setErrorMsg(String errorMsg) {
+        this.errorMsg = errorMsg;
     }
 }
