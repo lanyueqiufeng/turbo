@@ -8,10 +8,12 @@ import com.didiglobal.turbo.engine.common.RuntimeContext;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.exception.SuspendException;
 import com.didiglobal.turbo.engine.model.FlowElement;
+import com.didiglobal.turbo.engine.spi.DoUserTaskCommit;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
@@ -21,6 +23,9 @@ import java.util.Map;
 public class UserTaskExecutor extends ElementExecutor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UserTaskExecutor.class);
+
+    @Autowired(required = false)
+    private DoUserTaskCommit doUserTaskCommit;
 
     @Override
     protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {
@@ -78,6 +83,13 @@ public class UserTaskExecutor extends ElementExecutor {
                     flowInstanceId, status, nodeInstanceId, nodeKey);
             throw new ProcessException(ErrorEnum.COMMIT_FAILED, MessageFormat.format(Constants.NODE_INSTANCE_FORMAT,
                     flowElement.getKey(), nodeName, currentNodeInstance.getNodeInstanceId()));
+        }
+    }
+
+    @Override
+    protected void doCommit(RuntimeContext runtimeContext) throws ProcessException {
+        if (doUserTaskCommit != null) {
+            doUserTaskCommit.judgeUserTaskCommit(runtimeContext);
         }
     }
 
