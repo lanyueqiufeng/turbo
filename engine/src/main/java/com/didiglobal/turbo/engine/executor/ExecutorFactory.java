@@ -39,6 +39,9 @@ public class ExecutorFactory {
     @Resource
     private ReplyTaskExecutor replyTaskExecutor;
 
+    @Resource
+    private ServiceTaskExecutor serviceTaskExecutor;
+
 
     @Resource
     private SyncSingleCallActivityExecutor syncSingleCallActivityExecutor;
@@ -73,6 +76,8 @@ public class ExecutorFactory {
                 return getCallActivityExecutor(flowElement);
             case FlowElementType.REPLY_NODE:
                 return replyTaskExecutor;
+            case FlowElementType.SERVICE_TASK:
+                return serviceTaskExecutor;
             default:
                 return null;
         }

@@ -10,4 +10,6 @@ public class FlowElementType {
 
     public static final int REPLY_NODE = 601;
 
+    public static final int SERVICE_TASK = 602;
+
 }
