@@ -10,7 +10,7 @@ import com.didiglobal.turbo.engine.common.RuntimeContext;
  * @version v1.0
  * @date 2023/2/16 6:59 PM
  */
-public interface ReplyNodeHookService {
+public interface ReplyTaskExecuteService {
 
     /**
      * Invoke hook service, used to perform data refresh operations on the node.

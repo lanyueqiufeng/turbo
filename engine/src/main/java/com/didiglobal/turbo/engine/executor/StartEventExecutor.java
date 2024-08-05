@@ -26,9 +26,9 @@ public class StartEventExecutor extends ElementExecutor {
         String nodeKey = runtimeContext.getCurrentNodeInstance().getNodeKey();
         // 获取开始环节输入
         Map<String, InstanceData> instanceDataMap = runtimeContext.getInstanceDataMap();
-        Object nodeMap = instanceDataMap.get(ChatFlowConstant.variableKey.START_OUTPUT).getValue();
+        Object nodeMap = instanceDataMap.get(ChatFlowConstant.InstanceKey.START_OUTPUT).getValue();
         // 放入flowMap
-        JSONObject flowMap = (JSONObject) instanceDataMap.get(ChatFlowConstant.variableKey.FLOW_MAP).getValue();
+        JSONObject flowMap = (JSONObject) instanceDataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
         flowMap.put(nodeKey, nodeMap);
     }
 

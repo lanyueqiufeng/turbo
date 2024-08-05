@@ -5,19 +5,25 @@ package com.didiglobal.turbo.engine.common;
  * @date 2024/7/29 14:25
  */
 public interface ChatFlowConstant {
-    interface variableKey {
-
+    interface InstanceKey {
         String START_OUTPUT = "startOutput";
         String USER_TASK_OUTPUT = "userTaskOutput";
         String INPUT = "input";
-
         String INPUT_HISTORY = "inputHistory";
-
         String OPTION = "option";
-
         String FLOW_MAP = "flowMap";
-
         String SESSION_ID = "sessionId";
+    }
 
+    interface PropKey {
+        /**
+         * 环节入参要求
+         */
+        String INPUT_PARAM = "inParamMappingList";
+
+        /**
+         * 环节绑定的业务能力id
+         */
+        String BIZ_KEY = "bizKey";
     }
 }

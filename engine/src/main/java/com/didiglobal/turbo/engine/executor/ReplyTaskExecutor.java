@@ -7,7 +7,7 @@ import com.didiglobal.turbo.engine.common.RuntimeContext;
 import com.didiglobal.turbo.engine.entity.InstanceDataPO;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.model.InstanceData;
-import com.didiglobal.turbo.engine.spi.ReplyNodeHookService;
+import com.didiglobal.turbo.engine.spi.ReplyTaskExecuteService;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
 import org.apache.commons.collections4.MapUtils;
 import org.slf4j.Logger;
@@ -25,7 +25,7 @@ public class ReplyTaskExecutor extends ServiceTaskExecutor {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReplyTaskExecutor.class);
     @Resource
     @Lazy
-    private ReplyNodeHookService replyNodeHookService;
+    private ReplyTaskExecuteService replyNodeHookService;
 
     /**
      * Update data map: invoke hook service to update data map
@@ -38,7 +38,7 @@ public class ReplyTaskExecutor extends ServiceTaskExecutor {
         JSONObject nodeMap = replyNodeHookService.invoke(runtimeContext);
         // 向flowMap追加本轮nodeMap
         Map<String, InstanceData> dataMap = runtimeContext.getInstanceDataMap();
-        JSONObject flowMap = (JSONObject) dataMap.get(ChatFlowConstant.variableKey.FLOW_MAP).getValue();
+        JSONObject flowMap = (JSONObject) dataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
         flowMap.put(runtimeContext.getCurrentNodeInstance().getNodeKey(), nodeMap);
         // 数据持久化
         if (MapUtils.isNotEmpty(dataMap)) {
