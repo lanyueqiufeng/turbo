@@ -220,7 +220,7 @@ public class RuntimeProcessor {
 
         //5. set callActivity msg
         runtimeContext.setCallActivityFlowModuleId(commitTaskParam.getCallActivityFlowModuleId());
-
+        runtimeContext.setCallActivityFlowDeployId(commitTaskParam.getCallActivityFlowDeployId());
         return runtimeContext;
     }
 

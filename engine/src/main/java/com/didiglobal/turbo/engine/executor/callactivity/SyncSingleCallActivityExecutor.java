@@ -133,13 +133,16 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
 
         // 3.get flowModuleId
         String callActivityFlowModuleId = runtimeContext.getCallActivityFlowModuleId();
+        String callActivityFlowDeployId = runtimeContext.getCallActivityFlowDeployId();
         runtimeContext.setCallActivityFlowModuleId(null); // avoid misuse
+        runtimeContext.setCallActivityFlowDeployId(null);
         // 4.calculate variables
         List<InstanceData> callActivityVariables = getCallActivityVariables(runtimeContext);
 
         StartProcessParam startProcessParam = new StartProcessParam();
         startProcessParam.setRuntimeContext(runtimeContext);
         startProcessParam.setFlowModuleId(callActivityFlowModuleId);
+        startProcessParam.setFlowDeployId(callActivityFlowDeployId);
         startProcessParam.setVariables(callActivityVariables);
         StartProcessResult startProcessResult = runtimeProcessor.startProcess(startProcessParam);
         LOGGER.info("callActivity startProcess.||startProcessParam={}||startProcessResult={}", startProcessParam, startProcessResult);
@@ -247,7 +250,8 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         // transparent transmission callActivity param
         commitTaskParam.setCallActivityFlowModuleId(runtimeContext.getCallActivityFlowModuleId());
         runtimeContext.setCallActivityFlowModuleId(null); // avoid misuse
-
+        commitTaskParam.setCallActivityFlowDeployId(runtimeContext.getCallActivityFlowDeployId());
+        runtimeContext.setCallActivityFlowDeployId(null);
         CommitTaskResult commitTaskResult = runtimeProcessor.commit(commitTaskParam);
         LOGGER.info("callActivity commit.||commitTaskParam={}||commitTaskResult={}", commitTaskParam, commitTaskResult);
         handleCallActivityResult(runtimeContext, commitTaskResult);
@@ -295,7 +299,7 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
                 handleSuccessSubFlowResult(runtimeContext, runtimeResult);
                 break;
             case COMMIT_SUSPEND:
-                handleCommitSuspendFlowResult(runtimeContext, runtimeResult);
+                // handleCommitSuspendFlowResult(runtimeContext, runtimeResult);
             case ROLLBACK_SUSPEND:
                 runtimeContext.getCurrentNodeInstance().setStatus(NodeInstanceStatus.ACTIVE);
                 runtimeContext.setCallActivityRuntimeResultList(Arrays.asList(runtimeResult));

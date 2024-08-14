@@ -43,6 +43,7 @@ public class RuntimeContext {
 
     //2.5 transparent transmission field
     private String callActivityFlowModuleId; // from top to bottom transmit callActivityFlowModuleId
+    private String callActivityFlowDeployId;
     private List<RuntimeResult> callActivityRuntimeResultList; // from bottom to top transmit callActivityRuntimeResultList
 
     public RuntimeContext getParentRuntimeContext() {
@@ -179,6 +180,14 @@ public class RuntimeContext {
 
     public void setCallActivityFlowModuleId(String callActivityFlowModuleId) {
         this.callActivityFlowModuleId = callActivityFlowModuleId;
+    }
+
+    public String getCallActivityFlowDeployId() {
+        return callActivityFlowDeployId;
+    }
+
+    public void setCallActivityFlowDeployId(String callActivityFlowDeployId) {
+        this.callActivityFlowDeployId = callActivityFlowDeployId;
     }
 
     public List<RuntimeResult> getCallActivityRuntimeResultList() {

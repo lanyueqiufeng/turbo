@@ -45,6 +45,9 @@ public interface ChatFlowConstant {
         String PLUGIN = "plugin";
         // 大模型环节
         String LLM = "llm";
+        // 固定子流程
+        String FLOW = "flow";
+        String DYNAMIC_FLOW = "dynamic_flow";
     }
 
 }

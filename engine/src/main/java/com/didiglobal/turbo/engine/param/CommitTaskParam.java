@@ -10,6 +10,8 @@ public class CommitTaskParam extends RuntimeTaskParam {
     // Used to specify the FlowModuleId when commit CallActivity node
     private String callActivityFlowModuleId;
 
+    private String callActivityFlowDeployId;
+
     public List<InstanceData> getVariables() {
         return variables;
     }
@@ -24,6 +26,14 @@ public class CommitTaskParam extends RuntimeTaskParam {
 
     public void setCallActivityFlowModuleId(String callActivityFlowModuleId) {
         this.callActivityFlowModuleId = callActivityFlowModuleId;
+    }
+
+    public String getCallActivityFlowDeployId() {
+        return callActivityFlowDeployId;
+    }
+
+    public void setCallActivityFlowDeployId(String callActivityFlowDeployId) {
+        this.callActivityFlowDeployId = callActivityFlowDeployId;
     }
 
     @Override
