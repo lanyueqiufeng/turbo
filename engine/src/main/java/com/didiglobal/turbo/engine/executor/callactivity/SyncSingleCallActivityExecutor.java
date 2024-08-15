@@ -1,5 +1,6 @@
 package com.didiglobal.turbo.engine.executor.callactivity;
 
+import com.alibaba.fastjson.JSONObject;
 import com.didiglobal.turbo.engine.bo.NodeInstance;
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
 import com.didiglobal.turbo.engine.common.*;
@@ -329,6 +330,18 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         // 1.merge to current data
         Map<String, InstanceData> currentInstanceDataMap = runtimeContext.getInstanceDataMap();
         currentInstanceDataMap.putAll(InstanceDataUtil.getInstanceDataMap(instanceDataFromSubFlow));
+        // update: 将子流程end环节出参  绑定给对应子流程环节的出参
+        List<InstanceData> subFlowInstanceData = runtimeResult.getVariables();
+        for (InstanceData instanceData : subFlowInstanceData) {
+            if (instanceData.getKey().equals(ChatFlowConstant.InstanceKey.END_OUTPUT)) {
+                // 取出子流程出参
+                String nodeKey = runtimeContext.getCurrentNodeInstance().getNodeKey();
+                JSONObject flowMap = (JSONObject) currentInstanceDataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
+                // 放入父流程对应环节上
+                flowMap.put(nodeKey, instanceData.getValue());
+                break;
+            }
+        }
         // 2.save data
         String instanceDataId = genId();
         InstanceDataPO instanceDataPO = buildCallActivityEndInstanceData(instanceDataId, runtimeContext);

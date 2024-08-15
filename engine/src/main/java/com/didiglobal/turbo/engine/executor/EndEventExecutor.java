@@ -1,24 +1,39 @@
 package com.didiglobal.turbo.engine.executor;
 
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
-import com.didiglobal.turbo.engine.common.Constants;
-import com.didiglobal.turbo.engine.common.ErrorEnum;
-import com.didiglobal.turbo.engine.common.NodeInstanceStatus;
-import com.didiglobal.turbo.engine.common.RuntimeContext;
+import com.didiglobal.turbo.engine.common.*;
+import com.didiglobal.turbo.engine.entity.InstanceDataPO;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.model.FlowElement;
+import com.didiglobal.turbo.engine.spi.EndEventExecuteService;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
+import com.didiglobal.turbo.engine.util.InstanceDataUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
+import java.util.Date;
 
 @Service
 public class EndEventExecutor extends ElementExecutor {
 
+    @Autowired(required = false)
+    private EndEventExecuteService endEventExecuteService;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(EndEventExecutor.class);
+
+
+    @Override
+    protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {
+        if (endEventExecuteService != null) {
+            endEventExecuteService.invoke(runtimeContext);
+        }
+        saveInstanceDataPO(runtimeContext);
+    }
+
 
     @Override
     protected void postExecute(RuntimeContext runtimeContext) throws ProcessException {
@@ -56,5 +71,24 @@ public class EndEventExecutor extends ElementExecutor {
     protected RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
         LOGGER.info("getExecuteExecutor: no executor after EndEvent.");
         return null;
+    }
+
+    private String saveInstanceDataPO(RuntimeContext runtimeContext) {
+        String instanceDataId = genId();
+        InstanceDataPO instanceDataPO = buildExecuteInstanceData(instanceDataId, runtimeContext);
+        instanceDataDAO.insert(instanceDataPO);
+        return instanceDataId;
+    }
+
+    private InstanceDataPO buildExecuteInstanceData(String instanceDataId, RuntimeContext runtimeContext) {
+        InstanceDataPO instanceDataPO = new InstanceDataPO();
+        BeanUtils.copyProperties(runtimeContext, instanceDataPO);
+        instanceDataPO.setInstanceDataId(instanceDataId);
+        instanceDataPO.setInstanceData(InstanceDataUtil.getInstanceDataListStr(runtimeContext.getInstanceDataMap()));
+        instanceDataPO.setNodeInstanceId(runtimeContext.getCurrentNodeInstance().getNodeInstanceId());
+        instanceDataPO.setNodeKey(runtimeContext.getCurrentNodeModel().getKey());
+        instanceDataPO.setType(InstanceDataType.EXECUTE);
+        instanceDataPO.setCreateTime(new Date());
+        return instanceDataPO;
     }
 }

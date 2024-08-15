@@ -7,6 +7,7 @@ package com.didiglobal.turbo.engine.common;
 public interface ChatFlowConstant {
     interface InstanceKey {
         String START_OUTPUT = "startOutput";
+        String END_OUTPUT = "endOutput";
         String USER_TASK_OUTPUT = "userTaskOutput";
         String INPUT = "input";
         String INPUT_HISTORY = "inputHistory";
