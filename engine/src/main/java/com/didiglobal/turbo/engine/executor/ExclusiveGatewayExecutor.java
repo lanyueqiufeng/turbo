@@ -1,9 +1,9 @@
 package com.didiglobal.turbo.engine.executor;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
-import com.didiglobal.turbo.engine.common.InstanceDataType;
-import com.didiglobal.turbo.engine.common.NodeInstanceStatus;
-import com.didiglobal.turbo.engine.common.RuntimeContext;
+import com.didiglobal.turbo.engine.common.*;
 import com.didiglobal.turbo.engine.entity.InstanceDataPO;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.model.FlowElement;
@@ -21,10 +21,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class ExclusiveGatewayExecutor extends ElementExecutor implements InitializingBean {
@@ -57,7 +54,7 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
         LOGGER.info("doExecute getHookInfoValueMap.||hookInfoValueMap={}", hookInfoValueMap);
         if (MapUtils.isEmpty(hookInfoValueMap)) {
             LOGGER.warn("doExecute: hookInfoValueMap is empty.||flowInstanceId={}||hookInfoParam={}||nodeKey={}",
-                runtimeContext.getFlowInstanceId(), hookInfoParam, flowElement.getKey());
+                    runtimeContext.getFlowInstanceId(), hookInfoParam, flowElement.getKey());
             return;
         }
 
@@ -124,10 +121,107 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
     @Override
     protected RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
         FlowElement nextNode = calculateNextNode(runtimeContext.getCurrentNodeModel(),
-            runtimeContext.getFlowElementMap(), runtimeContext.getInstanceDataMap());
+                runtimeContext.getFlowElementMap(), runtimeContext.getInstanceDataMap());
 
         runtimeContext.setCurrentNodeModel(nextNode);
         return executorFactory.getElementExecutor(nextNode);
+    }
+
+    @Override
+    protected FlowElement calculateNextNode(FlowElement currentFlowElement, Map<String, FlowElement> flowElementMap, Map<String, InstanceData> instanceDataMap) throws ProcessException {
+        FlowElement nextFlowElement = calculateOutgoing(currentFlowElement, flowElementMap, instanceDataMap);
+
+        while (nextFlowElement.getType() == FlowElementType.SEQUENCE_FLOW) {
+            nextFlowElement = getUniqueNextNode(nextFlowElement, flowElementMap);
+        }
+        return nextFlowElement;
+    }
+
+    private FlowElement calculateOutgoing(FlowElement flowElement, Map<String, FlowElement> flowElementMap,
+                                          Map<String, InstanceData> instanceDataMap) throws ProcessException {
+
+        FlowElement defaultElement = null;
+        InstanceData flowMap = instanceDataMap.get("flowMap");
+        //当前流程用到的值都在这里
+        JSONObject flowMapValue = (JSONObject) flowMap.getValue();
+        //key为节点id
+        Map<String, Map<String, Object>> valueMap = new HashMap<>();
+        flowMapValue.forEach((key, value) -> valueMap.put(key, JSONObject.parseObject(value.toString(), Map.class)));
+
+        List<String> outgoingList = flowElement.getOutgoing();
+        //读取分支条件
+        JSONArray conditionList = (JSONArray) flowElement.getProperties().get("conditionList");
+
+        int outgoingSize = outgoingList.size();
+
+        nextLoop:
+        for (int i = 0; i < outgoingSize; i++) {
+            String outgoingKey = outgoingList.get(i);
+            FlowElement outgoingSequenceFlow = FlowModelUtil.getFlowElement(flowElementMap, outgoingKey);
+            //分支必须有至少一个出口，并且默认出口放到了最后
+            if (i == outgoingSize - 1) {
+                defaultElement = outgoingSequenceFlow;
+                break;
+            }
+            JSONObject condition = conditionList.getJSONObject(i);
+            //每个分支的条件集合
+            JSONArray itemList = condition.getJSONArray("itemList");
+            //子条件的组合方式，有两种组合方式：并、或
+            String operator = condition.getString("operator");
+            //是否匹配
+            boolean isMatch = false;
+
+            for (int k = 0; k < itemList.size(); k++) {
+                //子条件
+                JSONObject conditionItem = itemList.getJSONObject(k);
+                //变量所在节点的id
+                String act = conditionItem.getString("act");
+                //变量的名字
+                String name = conditionItem.getString("name");
+                //比较符号
+                String conditionItemOperator = conditionItem.getString("operator");
+                //比较值类型，有两种：引用、输入
+                String from = conditionItem.getString("from");
+                //如果是引用类型，此值表示引用节点的id
+                String nodeKey = conditionItem.getString("nodeKey");
+                //如果是引用类型，此值表示引用节点的变量名
+                Object value = conditionItem.getString("value");
+                if (from.equals("Reference")) {
+                    value = valueMap.get(nodeKey).get(value);
+                }
+                boolean predicate = false;
+                if (Objects.equals(from, "Reference")) {
+                    predicate = predicateWhenValueIsPassed(conditionItemOperator, valueMap.get(act).get(name), value);
+                } else {
+                    predicate = predicateWhenValueIsInput(conditionItemOperator, valueMap.get(act).get(name), (String) value);
+                }
+                if (operator.equals("and")) {
+                    if (!predicate) {
+                        continue nextLoop;
+                    }
+                    isMatch = true;
+                } else if (operator.equals("or")) {
+                    if (predicate) {
+                        return outgoingSequenceFlow;
+                    } else if (isMatch) {
+                        return outgoingSequenceFlow;
+                    }
+                }
+            }
+
+            if (isMatch) {
+                return outgoingSequenceFlow;
+            }
+
+        }
+        //case2 return default while it has is configured
+        if (defaultElement != null) {
+            LOGGER.info("calculateOutgoing: return defaultElement.||nodeKey={}", flowElement.getKey());
+            return defaultElement;
+        }
+
+        LOGGER.warn("calculateOutgoing failed.||nodeKey={}", flowElement.getKey());
+        throw new ProcessException(ErrorEnum.GET_OUTGOING_FAILED);
     }
 
     @Override
@@ -154,5 +248,179 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 }
             }
         }
+    }
+
+    /**
+     * 当value是从上游传递下来的时候，此时不需要强制转换value，直接比较值即可
+     *
+     * @param conditionItemOperator 条件符号
+     * @param variable              变量
+     * @param value                 比较值
+     * @return
+     */
+    private boolean predicateWhenValueIsPassed(String conditionItemOperator, Object variable, Object value) {
+        switch (conditionItemOperator) {
+            case "eq":
+                if (Objects.equals(variable, value)) {
+                    return true;
+                }
+                //有一个为空，另一个肯定不为空，此时不相等
+                if (variable == null || value == null) {
+                    return false;
+                }
+                //不相等的类型就不用比较了
+                if (!variable.getClass().equals(value.getClass())) {
+                    return false;
+                }
+                //如果是数组，那就比较数组内的元素
+                if (variable instanceof JSONArray) {
+                    return variable.toString().equals(value.toString());
+                }
+                break;
+            case "ne":
+                if (!Objects.equals(variable, value)) {
+                    return true;
+                }
+                //variable和value不可能同时为null，所以此时有一个为null那就证明两个值不相等
+                if (variable == null || value == null) {
+                    return true;
+                }
+                //不相等的类型就不用比较了
+                if (!variable.getClass().equals(value.getClass())) {
+                    return true;
+                }
+                //如果是数组，那就比较数组内的元素
+                if (variable instanceof JSONArray) {
+                    return !variable.toString().equals(value.toString());
+                }
+                break;
+            case "in":
+                if (variable instanceof String && value instanceof String && ((String) variable).contains(value.toString())) {
+                    return true;
+                }
+                if (!(value instanceof JSONArray)) {
+                    return false;
+                }
+                JSONArray valueArray = (JSONArray) value;
+                for (Object valueItem : valueArray) {
+                    if (Objects.equals(variable + "", valueItem.toString())) {
+                        return true;
+                    }
+                }
+                break;
+            case "notIn":
+                if (variable instanceof String && value instanceof String && !((String) variable).contains(value.toString())) {
+                    return true;
+                }
+                if (!(value instanceof JSONArray)) {
+                    return false;
+                }
+                valueArray = (JSONArray) value;
+                for (Object valueItem : valueArray) {
+                    if (Objects.equals(variable + "", valueItem.toString())) {
+                        return false;
+                    }
+                }
+                return true;
+            case "gt":
+            case "gte":
+            case "lt":
+            case "lte":
+                if (!(value instanceof Integer) || !(variable instanceof Integer)) {
+                    return false;
+                }
+                if (conditionItemOperator.equals("gt")) {
+                    return (Integer) variable > (Integer) value;
+                } else if (conditionItemOperator.equals("gte")) {
+                    return (Integer) variable >= (Integer) value;
+                } else if (conditionItemOperator.equals("lt")) {
+                    return (Integer) variable < (Integer) value;
+                } else if (conditionItemOperator.equals("lte")) {
+                    return (Integer) variable <= (Integer) value;
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("无法解析的比较符号:" + conditionItemOperator);
+        }
+        return false;
+    }
+
+    /**
+     * 当value是手输的时候，此时可能需要尝试强制转换value后再比较
+     *
+     * @param conditionItemOperator 条件符号
+     * @param variable              变量
+     * @param value                 比较值
+     * @return
+     */
+    private boolean predicateWhenValueIsInput(String conditionItemOperator, Object variable, String value) {
+        switch (conditionItemOperator) {
+            case "eq":
+                if (Objects.equals(variable, value)) {
+                    return true;
+                }
+                //有一个为空，另一个肯定不为空，此时不相等
+                if (variable == null || value == null) {
+                    return false;
+                }
+                //value不可能输入为数组
+                if (variable instanceof JSONArray) {
+                    return false;
+                }
+                if (Objects.equals(variable.toString(), value)) {
+                    return true;
+                }
+                break;
+            case "ne":
+                if (!Objects.equals(variable, value)) {
+                    return true;
+                }
+                //variable和value不可能同时为null，所以此时有一个为null那就证明两个值不相等
+                if (variable == null || value == null) {
+                    return true;
+                }
+                //value不可能输入为数组
+                if (variable instanceof JSONArray) {
+                    return true;
+                }
+                if (!Objects.equals(variable.toString(), value)) {
+                    return true;
+                }
+                break;
+            case "in":
+                if (variable instanceof String && value != null && ((String) variable).contains(value)) {
+                    return true;
+                }
+                break;
+            case "notIn":
+                if (variable instanceof String && value != null && !((String) variable).contains(value)) {
+                    return true;
+                }
+                break;
+            case "gt":
+            case "gte":
+            case "lt":
+            case "lte":
+                if (value == null) {
+                    return false;
+                }
+                if (!(variable instanceof Integer) || !value.matches("-?\\d+")) {
+                    return false;
+                }
+                int parsed = Integer.parseInt(value);
+                if (conditionItemOperator.equals("gt")) {
+                    return (Integer) variable > parsed;
+                } else if (conditionItemOperator.equals("gte")) {
+                    return (Integer) variable >= parsed;
+                } else if (conditionItemOperator.equals("lt")) {
+                    return (Integer) variable < parsed;
+                } else if (conditionItemOperator.equals("lte")) {
+                    return (Integer) variable <= parsed;
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("无法解析的比较符号:" + conditionItemOperator);
+        }
+        return false;
     }
 }
