@@ -13,6 +13,7 @@ import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
 import com.google.common.collect.Lists;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -45,9 +46,9 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
         String hookInfoParam = FlowModelUtil.getHookInfos(flowElement);
 
         // 2.ignore while properties is empty
-        // if (StringUtils.isBlank(hookInfoParam)) {
-        //     return;
-        // }
+        if (StringUtils.isBlank(hookInfoParam)) {
+            return;
+        }
 
         // 3.invoke hook and get data result
         Map<String, InstanceData> hookInfoValueMap = getHookInfoValueMap(runtimeContext);
