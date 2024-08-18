@@ -9,7 +9,7 @@ import com.didiglobal.turbo.engine.common.RuntimeContext;
  * @version v1.0
  * @date 2023/2/16 6:59 PM
  */
-public interface StartEventExecuteService {
+public interface ExclusiveGatewayLogService {
 
     /**
      * 环节运行时生命周期钩子

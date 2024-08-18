@@ -8,6 +8,7 @@ import com.didiglobal.turbo.engine.entity.InstanceDataPO;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
+import com.didiglobal.turbo.engine.spi.ExclusiveGatewayLogService;
 import com.didiglobal.turbo.engine.spi.HookService;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +34,8 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
     @Resource
     private ApplicationContext applicationContext;
 
+    @Autowired(required = false)
+    private ExclusiveGatewayLogService exclusiveGatewayLogService;
     private List<HookService> hookServices;
 
     /**
@@ -125,6 +129,9 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 runtimeContext.getFlowElementMap(), runtimeContext.getInstanceDataMap());
 
         runtimeContext.setCurrentNodeModel(nextNode);
+        if (exclusiveGatewayLogService != null) {
+            exclusiveGatewayLogService.invoke(runtimeContext);
+        }
         return executorFactory.getElementExecutor(nextNode);
     }
 

@@ -1,13 +1,14 @@
 package com.didiglobal.turbo.engine.executor;
 
-import com.alibaba.fastjson.JSONObject;
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
-import com.didiglobal.turbo.engine.common.*;
+import com.didiglobal.turbo.engine.common.Constants;
+import com.didiglobal.turbo.engine.common.ErrorEnum;
+import com.didiglobal.turbo.engine.common.NodeInstanceStatus;
+import com.didiglobal.turbo.engine.common.RuntimeContext;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.exception.SuspendException;
 import com.didiglobal.turbo.engine.model.FlowElement;
-import com.didiglobal.turbo.engine.model.InstanceData;
-import com.didiglobal.turbo.engine.spi.DoUserTaskCommit;
+import com.didiglobal.turbo.engine.spi.UserTaskExecuteService;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +25,7 @@ public class UserTaskExecutor extends ElementExecutor {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserTaskExecutor.class);
 
     @Autowired(required = false)
-    private DoUserTaskCommit doUserTaskCommit;
+    private UserTaskExecuteService userTaskExecuteService;
 
     @Override
     protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {
@@ -87,17 +88,9 @@ public class UserTaskExecutor extends ElementExecutor {
 
     @Override
     protected void doCommit(RuntimeContext runtimeContext) throws ProcessException {
-        if (doUserTaskCommit != null) {
-            doUserTaskCommit.judgeUserTaskCommit(runtimeContext);
+        if (userTaskExecuteService != null) {
+            userTaskExecuteService.commitInvoke(runtimeContext);
         }
-        // 构造开始环节输出  nodeMap
-        String nodeKey = runtimeContext.getCurrentNodeInstance().getNodeKey();
-        // 获取开始环节输入
-        Map<String, InstanceData> instanceDataMap = runtimeContext.getInstanceDataMap();
-        Object nodeMap = instanceDataMap.get(ChatFlowConstant.InstanceKey.USER_TASK_OUTPUT).getValue();
-        // 放入flowMap
-        JSONObject flowMap = (JSONObject) instanceDataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
-        flowMap.put(nodeKey, nodeMap);
     }
 
     @Override
