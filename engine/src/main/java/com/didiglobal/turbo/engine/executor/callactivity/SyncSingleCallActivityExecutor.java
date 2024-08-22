@@ -326,17 +326,19 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
 
     private void saveCallActivityEndInstanceData(RuntimeContext runtimeContext, RuntimeResult runtimeResult) throws ProcessException {
         NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
+        // 根据父子传递规则 计算后的子流程应该传给父流程的参数
         List<InstanceData> instanceDataFromSubFlow = calculateCallActivityOutParamFromSubFlow(runtimeContext, runtimeResult.getVariables());
         // 1.merge to current data
-        Map<String, InstanceData> currentInstanceDataMap = runtimeContext.getInstanceDataMap();
-        currentInstanceDataMap.putAll(InstanceDataUtil.getInstanceDataMap(instanceDataFromSubFlow));
+        Map<String, InstanceData> mainInstanceDataMap = InstanceDataUtil.getInstanceDataMap(instanceDataDAO.select(runtimeContext.getFlowInstanceId(), runtimeContext.getInstanceDataId()).getInstanceData());
+        mainInstanceDataMap.putAll(InstanceDataUtil.getInstanceDataMap(instanceDataFromSubFlow));
+        runtimeContext.setInstanceDataMap(mainInstanceDataMap);
         // update: 将子流程end环节出参  绑定给对应子流程环节的出参
         List<InstanceData> subFlowInstanceData = runtimeResult.getVariables();
         for (InstanceData instanceData : subFlowInstanceData) {
             if (instanceData.getKey().equals(ChatFlowConstant.InstanceKey.END_OUTPUT)) {
                 // 取出子流程出参
                 String nodeKey = runtimeContext.getCurrentNodeInstance().getNodeKey();
-                JSONObject flowMap = (JSONObject) currentInstanceDataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
+                JSONObject flowMap = (JSONObject) mainInstanceDataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
                 // 放入父流程对应环节上
                 flowMap.put(nodeKey, instanceData.getValue());
                 break;
