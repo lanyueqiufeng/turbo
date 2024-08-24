@@ -380,9 +380,9 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 }
                 break;
             case "ne":
-                if (!Objects.equals(variable, value)) {
-                    return true;
-                }
+//                if (!Objects.equals(variable, value)) {
+//                    return true;
+//                }
                 //variable和value不可能同时为null，所以此时有一个为null那就证明两个值不相等
                 if (variable == null || value == null) {
                     return true;
