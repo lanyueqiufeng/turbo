@@ -53,6 +53,6 @@ public class ElementValidator {
     private String getElementValidatorExceptionMsg(FlowElement flowElement, ErrorEnum errorEnum) {
         String elementName = FlowModelUtil.getElementName(flowElement);
         String elementKey = flowElement.getKey();
-        return MessageFormat.format(Constants.MODEL_DEFINITION_ERROR_MSG_FORMAT, errorEnum, elementName, elementKey);
+        return MessageFormat.format(Constants.MODEL_DEFINITION_ERROR_MSG_FORMAT, errorEnum.getErrMsg(), elementName, elementKey);
     }
 }
