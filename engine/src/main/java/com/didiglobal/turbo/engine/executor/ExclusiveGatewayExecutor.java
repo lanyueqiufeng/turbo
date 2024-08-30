@@ -6,6 +6,7 @@ import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
 import com.didiglobal.turbo.engine.common.*;
 import com.didiglobal.turbo.engine.entity.InstanceDataPO;
 import com.didiglobal.turbo.engine.exception.ProcessException;
+import com.didiglobal.turbo.engine.model.ExclusiveGatewayInParamMapping;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
 import com.didiglobal.turbo.engine.spi.ExclusiveGatewayLogService;
@@ -82,7 +83,7 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
             dataList.addAll(list);
             // } catch (Exception e) {
             //     LOGGER.warn("hook service invoke fail, serviceName={}, runtimeContext={}",
-            //         service.getClass().getName(), runtimeContext);
+            //         service.getClass().getValueName(), runtimeContext);
             // }
         }
         return InstanceDataUtil.getInstanceDataMap(dataList);
@@ -149,18 +150,15 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                                           Map<String, InstanceData> instanceDataMap) throws ProcessException {
 
         FlowElement defaultElement = null;
-        InstanceData flowMap = instanceDataMap.get("flowMap");
+        InstanceData flowMap = instanceDataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP);
         //当前流程用到的值都在这里
         JSONObject flowMapValue = (JSONObject) flowMap.getValue();
-        //key为节点id
-        Map<String, Map<String, Object>> valueMap = new HashMap<>();
-        flowMapValue.forEach((key, value) -> valueMap.put(key, JSONObject.parseObject(value.toString(), Map.class)));
 
         List<String> outgoingList = flowElement.getOutgoing();
-        //读取分支条件
-        JSONArray conditionList = (JSONArray) flowElement.getProperties().get("conditionList");
-
         int outgoingSize = outgoingList.size();
+
+        //读取分支条件
+        JSONArray conditionList = (JSONArray) flowElement.getProperties().get(ChatFlowConstant.ExclusiveGateway.CONDITION_LIST);
 
         nextLoop:
         for (int i = 0; i < outgoingSize; i++) {
@@ -173,35 +171,43 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
             }
             JSONObject condition = conditionList.getJSONObject(i);
             //每个分支的条件集合
-            JSONArray itemList = condition.getJSONArray("itemList");
+            JSONArray itemList = condition.getJSONArray(ChatFlowConstant.ExclusiveGateway.ITEM_LIST);
             //子条件的组合方式，有两种组合方式：并、或
-            String operator = condition.getString("operator");
+            String operator = condition.getString(ChatFlowConstant.ExclusiveGateway.OPERATOR);
             //是否匹配
             boolean isMatch = false;
 
             for (int k = 0; k < itemList.size(); k++) {
                 //子条件
-                JSONObject conditionItem = itemList.getJSONObject(k);
-                //变量所在节点的id
-                String act = conditionItem.getString("act");
-                //变量的名字
-                String name = conditionItem.getString("name");
+                JSONObject item = itemList.getJSONObject(k);
+                //左侧变量所属节点
+                String leftSideNodeKey = item.getString(ChatFlowConstant.ExclusiveGateway.ACT);
+                //左侧引用的参数名
+                String leftSideValue = item.getString(ChatFlowConstant.ExclusiveGateway.NAME);
                 //比较符号
-                String conditionItemOperator = conditionItem.getString("operator");
-                //比较值类型，有两种：引用、输入
-                String from = conditionItem.getString("from");
-                //如果是引用类型，此值表示引用节点的id
-                String nodeKey = conditionItem.getString("nodeKey");
-                //如果是引用类型，此值表示引用节点的变量名
-                Object value = conditionItem.getString("value");
-                if (from.equals("Reference")) {
-                    value = valueMap.get(nodeKey).get(value);
-                }
+                String itemOperator = item.getString(ChatFlowConstant.ExclusiveGateway.OPERATOR);
+                //右侧值类型，有两种：引用、输入
+                String rightSideFrom = item.getString(ChatFlowConstant.ExclusiveGateway.FROM);
+                //右侧变量所属节点
+                String rightSideNodeKey = item.getString(ChatFlowConstant.ExclusiveGateway.NODE_KEY);
+                //右侧引用的参数名或者输入值
+                String rightSideValue = item.getString(ChatFlowConstant.ExclusiveGateway.VALUE);
+
+                ExclusiveGatewayInParamMapping inParamMapping = new ExclusiveGatewayInParamMapping();
+                inParamMapping.setLeftSideNodeKey(leftSideNodeKey);
+                inParamMapping.setLeftSideValue(leftSideValue);
+                inParamMapping.setRightSideFrom(rightSideFrom);
+                inParamMapping.setRightSideNodeKey(rightSideNodeKey);
+                inParamMapping.setRightSideValue(rightSideValue);
+
+                Object leftSideObject = inParamMapping.getLeftSideObject(flowMapValue);
+                Object rightSideObject = inParamMapping.getRightSideObject(flowMapValue);
+
                 boolean predicate = false;
-                if (Objects.equals(from, "Reference")) {
-                    predicate = predicateWhenValueIsPassed(conditionItemOperator, valueMap.get(act).get(name), value);
+                if (Objects.equals(rightSideFrom, ChatFlowConstant.ExclusiveGateway.REFERENCE)) {
+                    predicate = predicateWhenValueIsPassed(itemOperator, leftSideObject, rightSideObject);
                 } else {
-                    predicate = predicateWhenValueIsInput(conditionItemOperator, valueMap.get(act).get(name), (String) value);
+                    predicate = predicateWhenValueIsInput(itemOperator, leftSideObject, (String) rightSideObject);
                 }
                 if (operator.equals("and")) {
                     if (!predicate) {
@@ -259,74 +265,87 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
     }
 
     /**
-     * 当value是从上游传递下来的时候，此时不需要强制转换value，直接比较值即可
+     * 当右侧值是从上游传递下来的时候，此时不需要强制转换右侧值，直接比较值即可
      *
-     * @param conditionItemOperator 条件符号
-     * @param variable              变量
-     * @param value                 比较值
+     * @param operator 条件符号
+     * @param leftSideObject        左侧值
+     * @param rightSideObject       右侧值
      * @return
      */
-    private boolean predicateWhenValueIsPassed(String conditionItemOperator, Object variable, Object value) {
-        switch (conditionItemOperator) {
+    private boolean predicateWhenValueIsPassed(String operator, Object leftSideObject, Object rightSideObject) {
+        switch (operator) {
             case "eq":
-                if (Objects.equals(variable, value)) {
+                if (Objects.equals(leftSideObject, rightSideObject)) {
                     return true;
                 }
                 //有一个为空，另一个肯定不为空，此时不相等
-                if (variable == null || value == null) {
+                if (leftSideObject == null || rightSideObject == null) {
                     return false;
                 }
                 //不相等的类型就不用比较了
-                if (!variable.getClass().equals(value.getClass())) {
+                if (!leftSideObject.getClass().equals(rightSideObject.getClass())) {
                     return false;
                 }
                 //如果是数组，那就比较数组内的元素
-                if (variable instanceof JSONArray) {
-                    return variable.toString().equals(value.toString());
+                if (leftSideObject instanceof List) {
+                    return leftSideObject.toString().equals(rightSideObject.toString());
                 }
                 break;
             case "ne":
-                if (!Objects.equals(variable, value)) {
+                if (!Objects.equals(leftSideObject, rightSideObject)) {
                     return true;
                 }
-                //variable和value不可能同时为null，所以此时有一个为null那就证明两个值不相等
-                if (variable == null || value == null) {
+                //左和右不可能同时为null，所以此时有一个为null那就证明两个值不相等
+                if (leftSideObject == null) {
                     return true;
                 }
                 //不相等的类型就不用比较了
-                if (!variable.getClass().equals(value.getClass())) {
+                if (!leftSideObject.getClass().equals(rightSideObject.getClass())) {
                     return true;
                 }
                 //如果是数组，那就比较数组内的元素
-                if (variable instanceof JSONArray) {
-                    return !variable.toString().equals(value.toString());
+                if (leftSideObject instanceof List) {
+                    return !leftSideObject.toString().equals(rightSideObject.toString());
                 }
                 break;
             case "in":
-                if (variable instanceof String && value instanceof String && ((String) variable).contains(value.toString())) {
+                //只有三种情况才算包含
+                //1、两者都是字符串且左包含右
+                if (leftSideObject instanceof String && rightSideObject instanceof String && ((String) leftSideObject).contains(rightSideObject.toString())) {
                     return true;
                 }
-                if (!(value instanceof JSONArray)) {
-                    return false;
-                }
-                JSONArray valueArray = (JSONArray) value;
-                for (Object valueItem : valueArray) {
-                    if (Objects.equals(variable + "", valueItem.toString())) {
+
+                if (leftSideObject instanceof List) {
+                    //2、左和右都是数组,且左包含右
+                    if (rightSideObject instanceof List && Collections.indexOfSubList((List) leftSideObject, (List) rightSideObject) != -1) {
                         return true;
+                    }
+                    //3、左是数组，且数组的某个子项与右相等
+                    List valueArray = (List) leftSideObject;
+                    for (Object valueItem : valueArray) {
+                        if (predicateWhenValueIsPassed("eq", valueItem, rightSideObject)) {
+                            return true;
+                        }
                     }
                 }
                 break;
             case "notIn":
-                if (variable instanceof String && value instanceof String && !((String) variable).contains(value.toString())) {
-                    return true;
-                }
-                if (!(value instanceof JSONArray)) {
+                //只有三种情况才算包含，其他都是不包含
+                //1、两者都是字符串且左包含右
+                if (leftSideObject instanceof String && rightSideObject instanceof String && ((String) leftSideObject).contains(rightSideObject.toString())) {
                     return false;
                 }
-                valueArray = (JSONArray) value;
-                for (Object valueItem : valueArray) {
-                    if (Objects.equals(variable + "", valueItem.toString())) {
+                if (leftSideObject instanceof List) {
+                    //2、左和右都是数组,且左包含右
+                    if (rightSideObject instanceof List && Collections.indexOfSubList((List) leftSideObject, (List) rightSideObject) != -1) {
                         return false;
+                    }
+                    //3、左是数组，且数组的某个子项与右相等
+                    List valueArray = (List) leftSideObject;
+                    for (Object valueItem : valueArray) {
+                        if (predicateWhenValueIsPassed("eq", valueItem, rightSideObject)) {
+                            return false;
+                        }
                     }
                 }
                 return true;
@@ -334,100 +353,119 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
             case "gte":
             case "lt":
             case "lte":
-                if (!(value instanceof Integer) || !(variable instanceof Integer)) {
+                if (!(rightSideObject instanceof Integer) || !(leftSideObject instanceof Integer)) {
                     return false;
                 }
-                if (conditionItemOperator.equals("gt")) {
-                    return (Integer) variable > (Integer) value;
-                } else if (conditionItemOperator.equals("gte")) {
-                    return (Integer) variable >= (Integer) value;
-                } else if (conditionItemOperator.equals("lt")) {
-                    return (Integer) variable < (Integer) value;
-                } else if (conditionItemOperator.equals("lte")) {
-                    return (Integer) variable <= (Integer) value;
+                if (operator.equals("gt")) {
+                    return (Integer) leftSideObject > (Integer) rightSideObject;
+                } else if (operator.equals("gte")) {
+                    return (Integer) leftSideObject >= (Integer) rightSideObject;
+                } else if (operator.equals("lt")) {
+                    return (Integer) leftSideObject < (Integer) rightSideObject;
+                } else if (operator.equals("lte")) {
+                    return (Integer) leftSideObject <= (Integer) rightSideObject;
                 }
                 break;
             default:
-                throw new IllegalArgumentException("无法解析的比较符号:" + conditionItemOperator);
+                throw new IllegalArgumentException("无法解析的比较符号:" + operator);
         }
         return false;
     }
 
     /**
-     * 当value是手输的时候，此时可能需要尝试强制转换value后再比较
+     * 当右侧值是手输的时候，此时可能需要尝试强制转换右侧值后再比较
      *
-     * @param conditionItemOperator 条件符号
-     * @param variable              变量
-     * @param value                 比较值
+     * @param operator 条件符号
+     * @param leftSideObject        左侧值
+     * @param rightSideObject       右侧值
      * @return
      */
-    private boolean predicateWhenValueIsInput(String conditionItemOperator, Object variable, String value) {
-        switch (conditionItemOperator) {
+    private boolean predicateWhenValueIsInput(String operator, Object leftSideObject, String rightSideObject) {
+        switch (operator) {
             case "eq":
-                if (Objects.equals(variable, value)) {
+                if (Objects.equals(leftSideObject, rightSideObject)) {
                     return true;
                 }
                 //有一个为空，另一个肯定不为空，此时不相等
-                if (variable == null || value == null) {
+                if (leftSideObject == null || rightSideObject == null) {
                     return false;
                 }
-                //value不可能输入为数组
-                if (variable instanceof JSONArray) {
+                //右不可输入为数组
+                if (leftSideObject instanceof List) {
                     return false;
                 }
-                if (Objects.equals(variable.toString(), value)) {
+                if (Objects.equals(leftSideObject.toString(), rightSideObject)) {
                     return true;
                 }
                 break;
             case "ne":
-//                if (!Objects.equals(variable, value)) {
-//                    return true;
-//                }
-                //variable和value不可能同时为null，所以此时有一个为null那就证明两个值不相等
-                if (variable == null || value == null) {
+                //左和右不可能同时为null，所以此时有一个为null那就证明两个值不相等
+                if (leftSideObject == null || rightSideObject == null) {
                     return true;
                 }
-                //value不可能输入为数组
-                if (variable instanceof JSONArray) {
+                //右不可输入为数组
+                if (leftSideObject instanceof List) {
                     return true;
                 }
-                if (!Objects.equals(variable.toString(), value)) {
+                if (!Objects.equals(leftSideObject.toString(), rightSideObject)) {
                     return true;
                 }
                 break;
             case "in":
-                if (variable instanceof String && value != null && ((String) variable).contains(value)) {
+                //只有两种情况才算包含
+                //1、两者都是字符串且左包含右
+                if (leftSideObject instanceof String && rightSideObject != null && ((String) leftSideObject).contains(rightSideObject)) {
                     return true;
+                }
+                //2、左是数组，且数组的某个子项与右相等
+                if (leftSideObject instanceof List) {
+                    List leftSideArray = (List) leftSideObject;
+                    for (Object o : leftSideArray) {
+                        if (predicateWhenValueIsInput("eq", o, rightSideObject)) {
+                            return true;
+                        }
+                    }
                 }
                 break;
             case "notIn":
-                if (variable instanceof String && value != null && !((String) variable).contains(value)) {
-                    return true;
+                //只有两种情况才算包含，其他都是不包含
+                //1、两者都是字符串且左包含右
+                if (leftSideObject instanceof String && rightSideObject != null && ((String) leftSideObject).contains(rightSideObject)) {
+                    return false;
                 }
-                break;
+                //2、左是数组，且数组的某个子项与右相等
+                if (leftSideObject instanceof List) {
+                    List valueArray = (List) leftSideObject;
+                    for (Object valueItem : valueArray) {
+                        if (predicateWhenValueIsPassed("eq", valueItem, rightSideObject)) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
             case "gt":
             case "gte":
             case "lt":
             case "lte":
-                if (value == null) {
+                if (rightSideObject == null) {
                     return false;
                 }
-                if (!(variable instanceof Integer) || !value.matches("-?\\d+")) {
+                if (!(leftSideObject instanceof Integer) || !rightSideObject.matches("-?\\d+")) {
                     return false;
                 }
-                int parsed = Integer.parseInt(value);
-                if (conditionItemOperator.equals("gt")) {
-                    return (Integer) variable > parsed;
-                } else if (conditionItemOperator.equals("gte")) {
-                    return (Integer) variable >= parsed;
-                } else if (conditionItemOperator.equals("lt")) {
-                    return (Integer) variable < parsed;
-                } else if (conditionItemOperator.equals("lte")) {
-                    return (Integer) variable <= parsed;
+                int parsed = Integer.parseInt(rightSideObject);
+                if (operator.equals("gt")) {
+                    return (Integer) leftSideObject > parsed;
+                } else if (operator.equals("gte")) {
+                    return (Integer) leftSideObject >= parsed;
+                } else if (operator.equals("lt")) {
+                    return (Integer) leftSideObject < parsed;
+                } else if (operator.equals("lte")) {
+                    return (Integer) leftSideObject <= parsed;
                 }
                 break;
             default:
-                throw new IllegalArgumentException("无法解析的比较符号:" + conditionItemOperator);
+                throw new IllegalArgumentException("无法解析的比较符号:" + operator);
         }
         return false;
     }

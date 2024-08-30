@@ -51,4 +51,34 @@ public interface ChatFlowConstant {
         String DYNAMIC_FLOW = "dynamic_flow";
     }
 
+    interface ExclusiveGateway {
+        /**
+         * 分支条件列表
+         */
+        String CONDITION_LIST = "conditionList";
+        /**
+         * 单个分支的条件列表
+         */
+        String ITEM_LIST = "itemList";
+        /**
+         * 比较类型
+         */
+        String OPERATOR = "operator";
+        /**
+         * 左侧变量所属节点
+         */
+        String ACT="act";
+        /**
+         * 左侧引用的参数名
+         */
+        String NAME = "name";
+        /**
+         * 右侧值类型
+         */
+        String FROM = "from";
+        String NODE_KEY = "nodeKey";
+        String VALUE = "value";
+        String REFERENCE = "Reference";
+    }
+
 }
