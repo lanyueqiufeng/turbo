@@ -7,6 +7,7 @@ import com.didiglobal.turbo.engine.common.*;
 import com.didiglobal.turbo.engine.entity.*;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.exception.SuspendException;
+import com.didiglobal.turbo.engine.executor.ServiceTaskExecutor;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
 import com.didiglobal.turbo.engine.param.CommitTaskParam;
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -44,6 +46,9 @@ import java.util.Map;
 public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SyncSingleCallActivityExecutor.class);
+
+    @Resource
+    private ServiceTaskExecutor serviceTaskExecutor;
 
     @Override
     protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {
@@ -82,6 +87,8 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         } else {
             commitCallActivity(runtimeContext);
         }
+        String instanceDataId = serviceTaskExecutor.saveInstanceDataPO(runtimeContext);
+        runtimeContext.setInstanceDataId(instanceDataId);
     }
 
     @Override

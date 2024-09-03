@@ -50,7 +50,7 @@ public class ServiceTaskExecutor extends ElementExecutor {
         }
     }
 
-    private String saveInstanceDataPO(RuntimeContext runtimeContext) {
+    public String saveInstanceDataPO(RuntimeContext runtimeContext) {
         String instanceDataId = genId();
         InstanceDataPO instanceDataPO = buildHookInstanceData(instanceDataId, runtimeContext);
         instanceDataDAO.insert(instanceDataPO);

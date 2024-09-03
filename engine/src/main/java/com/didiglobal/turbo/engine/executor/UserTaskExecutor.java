@@ -16,6 +16,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.text.MessageFormat;
 import java.util.Map;
 
@@ -26,6 +27,9 @@ public class UserTaskExecutor extends ElementExecutor {
 
     @Autowired(required = false)
     private UserTaskExecuteService userTaskExecuteService;
+
+    @Resource
+    private ServiceTaskExecutor serviceTaskExecutor;
 
     @Override
     protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {
@@ -90,6 +94,8 @@ public class UserTaskExecutor extends ElementExecutor {
     protected void doCommit(RuntimeContext runtimeContext) throws ProcessException {
         if (userTaskExecuteService != null) {
             userTaskExecuteService.commitInvoke(runtimeContext);
+            String instanceDataId = serviceTaskExecutor.saveInstanceDataPO(runtimeContext);
+            runtimeContext.setInstanceDataId(instanceDataId);
         }
     }
 
