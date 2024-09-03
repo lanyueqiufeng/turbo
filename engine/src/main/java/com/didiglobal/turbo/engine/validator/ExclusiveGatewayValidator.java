@@ -76,12 +76,12 @@ public class ExclusiveGatewayValidator extends ElementValidator {
                 }
                 //如果是引用类型，此值表示引用节点的id
                 String nodeKey = conditionItem.getString("nodeKey");
-                if (from.equals("Reference") && StringUtils.isBlank(nodeKey)) {
+                if (from.equals("Reference") && StringUtils.isBlank(nodeKey) && !"isNull".equals(conditionItemOperator) && !"isNotNull".equals(conditionItemOperator)) {
                     throwElementValidatorException(flowElement, ErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES);
                 }
                 //如果是引用类型，此值表示引用节点的变量名
                 Object value = conditionItem.get("value");
-                if (from.equals("Reference") && StringUtils.isBlank((String) value)) {
+                if (from.equals("Reference") && StringUtils.isBlank((String) value) && !"isNull".equals(conditionItemOperator) && !"isNotNull".equals(conditionItemOperator)) {
                     throwElementValidatorException(flowElement, ErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES);
                 }
             }

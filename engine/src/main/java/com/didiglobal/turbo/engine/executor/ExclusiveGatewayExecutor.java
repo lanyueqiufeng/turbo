@@ -201,13 +201,18 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 inParamMapping.setRightSideValue(rightSideValue);
 
                 Object leftSideObject = inParamMapping.getLeftSideObject(flowMapValue);
-                Object rightSideObject = inParamMapping.getRightSideObject(flowMapValue);
-
                 boolean predicate = false;
-                if (Objects.equals(rightSideFrom, ChatFlowConstant.ExclusiveGateway.REFERENCE)) {
-                    predicate = predicateWhenValueIsPassed(itemOperator, leftSideObject, rightSideObject);
+                if (Objects.equals("isNull", itemOperator)) {
+                    predicate = Objects.isNull(leftSideObject);
+                } else if (Objects.equals("isNotNull", itemOperator)) {
+                    predicate = !Objects.isNull(leftSideObject);
                 } else {
-                    predicate = predicateWhenValueIsInput(itemOperator, leftSideObject, (String) rightSideObject);
+                    Object rightSideObject = inParamMapping.getRightSideObject(flowMapValue);
+                    if (Objects.equals(rightSideFrom, ChatFlowConstant.ExclusiveGateway.REFERENCE)) {
+                        predicate = predicateWhenValueIsPassed(itemOperator, leftSideObject, rightSideObject);
+                    } else {
+                        predicate = predicateWhenValueIsInput(itemOperator, leftSideObject, (String) rightSideObject);
+                    }
                 }
                 if (operator.equals("and")) {
                     if (!predicate) {
@@ -267,9 +272,9 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
     /**
      * 当右侧值是从上游传递下来的时候，此时不需要强制转换右侧值，直接比较值即可
      *
-     * @param operator 条件符号
-     * @param leftSideObject        左侧值
-     * @param rightSideObject       右侧值
+     * @param operator        条件符号
+     * @param leftSideObject  左侧值
+     * @param rightSideObject 右侧值
      * @return
      */
     private boolean predicateWhenValueIsPassed(String operator, Object leftSideObject, Object rightSideObject) {
@@ -375,9 +380,9 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
     /**
      * 当右侧值是手输的时候，此时可能需要尝试强制转换右侧值后再比较
      *
-     * @param operator 条件符号
-     * @param leftSideObject        左侧值
-     * @param rightSideObject       右侧值
+     * @param operator        条件符号
+     * @param leftSideObject  左侧值
+     * @param rightSideObject 右侧值
      * @return
      */
     private boolean predicateWhenValueIsInput(String operator, Object leftSideObject, String rightSideObject) {
