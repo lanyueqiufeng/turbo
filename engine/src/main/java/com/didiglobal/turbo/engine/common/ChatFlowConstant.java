@@ -10,6 +10,7 @@ public interface ChatFlowConstant {
         String END_OUTPUT = "endOutput";
         String USER_TASK_OUTPUT = "userTaskOutput";
         String INPUT = "input";
+        String MSG_TYPE = "msgType";
         String INPUT_HISTORY = "inputHistory";
         String OPTION = "option";
         String FLOW_MAP = "flowMap";
