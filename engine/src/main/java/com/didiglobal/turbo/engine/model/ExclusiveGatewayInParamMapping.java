@@ -2,6 +2,8 @@ package com.didiglobal.turbo.engine.model;
 
 import com.alibaba.fastjson.JSONObject;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 import javax.annotation.Nullable;
@@ -15,6 +17,7 @@ import java.util.Map;
  * @author liuchengbiao
  */
 public class ExclusiveGatewayInParamMapping {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExclusiveGatewayInParamMapping.class);
     /**
      * 参数名分隔符
      */
@@ -59,7 +62,10 @@ public class ExclusiveGatewayInParamMapping {
         JSONObject nodeMap = (JSONObject) flowMap.get(this.leftSideNodeKey);
         Assert.isTrue(StringUtils.isNotBlank(this.leftSideNodeKey), "左侧变量所属节点未配置");
         Assert.isTrue(StringUtils.isNotBlank(this.leftSideValue), "左侧引用的参数名未配置");
-        Assert.isTrue(null != nodeMap, "左侧参数来源对应环节未找到");
+        if (null == nodeMap) {
+            LOGGER.warn("参数【{}】来源对应环节未找到, 将返回null，请谨慎处理", leftSideValue);
+            return null;
+        }
         String[] valueKeys = this.leftSideValue.split(valueSplit);
         List<Object> results = new ArrayList<>();
         Boolean isArray = getItemValue(nodeMap, valueKeys, 0, results, Boolean.FALSE);
@@ -91,7 +97,10 @@ public class ExclusiveGatewayInParamMapping {
 
         Assert.isTrue(StringUtils.isNotBlank(this.rightSideNodeKey), "右侧变量所属节点未配置");
         Assert.isTrue(StringUtils.isNotBlank(this.rightSideValue), "右侧引用的参数名未配置");
-        Assert.isTrue(null != nodeMap, "右侧参数来源对应环节未找到");
+        if (null == nodeMap) {
+            LOGGER.warn("参数【{}】来源对应环节未找到, 将返回null，请谨慎处理", rightSideValue);
+            return null;
+        }
         String[] valueKeys = this.rightSideValue.split(valueSplit);
         List<Object> results = new ArrayList<>();
         Boolean isArray = getItemValue(nodeMap, valueKeys, 0, results, Boolean.FALSE);
