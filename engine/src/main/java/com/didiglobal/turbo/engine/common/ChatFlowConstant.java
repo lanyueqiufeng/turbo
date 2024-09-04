@@ -70,6 +70,10 @@ public interface ChatFlowConstant {
          */
         String ACT="act";
         /**
+         * 左侧变量所属节点名称
+         */
+        String ACT_NAME = "actName";
+        /**
          * 左侧引用的参数名
          */
         String NAME = "name";
@@ -77,7 +81,17 @@ public interface ChatFlowConstant {
          * 右侧值类型
          */
         String FROM = "from";
+        /**
+         * 右侧变量所属节点
+         */
         String NODE_KEY = "nodeKey";
+        /**
+         * 右侧变量所属节点名称
+         */
+        String NODE_NAME = "nodeName";
+        /**
+         * 右侧引用的参数名或者输入值
+         */
         String VALUE = "value";
         String REFERENCE = "Reference";
     }

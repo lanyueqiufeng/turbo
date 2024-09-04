@@ -27,6 +27,10 @@ public class ExclusiveGatewayInParamMapping {
      */
     private String leftSideNodeKey;
     /**
+     * 左侧变量所属节点名称
+     */
+    private String leftSideNodeName;
+    /**
      * 左侧引用的参数名(参数名为a/b/c格式)
      */
     private String leftSideValue;
@@ -39,6 +43,10 @@ public class ExclusiveGatewayInParamMapping {
      * 右侧变量所属节点
      */
     private String rightSideNodeKey;
+    /**
+     * 右侧变量所属节点名称
+     */
+    private String rightSideNodeName;
     /**
      * 右侧引用的参数名或者输入值，如果rightSideFrom是input那这里就是输入值，否则就是引用的参数名(参数名为a/b/c格式)
      */
@@ -63,7 +71,7 @@ public class ExclusiveGatewayInParamMapping {
         Assert.isTrue(StringUtils.isNotBlank(this.leftSideNodeKey), "左侧变量所属节点未配置");
         Assert.isTrue(StringUtils.isNotBlank(this.leftSideValue), "左侧引用的参数名未配置");
         if (null == nodeMap) {
-            LOGGER.warn("参数【{}】来源对应环节未找到, 将返回null，请谨慎处理", leftSideValue);
+            LOGGER.warn("左侧参数【{}】来源对应环节【{}】未找到, 将返回null，请谨慎处理", leftSideValue,this.leftSideNodeName);
             return null;
         }
         String[] valueKeys = this.leftSideValue.split(valueSplit);
@@ -73,6 +81,7 @@ public class ExclusiveGatewayInParamMapping {
             return results.get(0);
         }
         if (results.isEmpty()) {
+            LOGGER.warn("左侧参数[{}]在对应来源环节[{}]下未找到或者null值,返回", this.leftSideValue, this.leftSideNodeName);
             return null;
         }
         return results;
@@ -98,7 +107,7 @@ public class ExclusiveGatewayInParamMapping {
         Assert.isTrue(StringUtils.isNotBlank(this.rightSideNodeKey), "右侧变量所属节点未配置");
         Assert.isTrue(StringUtils.isNotBlank(this.rightSideValue), "右侧引用的参数名未配置");
         if (null == nodeMap) {
-            LOGGER.warn("参数【{}】来源对应环节未找到, 将返回null，请谨慎处理", rightSideValue);
+            LOGGER.warn("右侧参数【{}】来源对应环节【{}】未找到, 将返回null，请谨慎处理", rightSideValue,this.rightSideNodeName);
             return null;
         }
         String[] valueKeys = this.rightSideValue.split(valueSplit);
@@ -108,6 +117,7 @@ public class ExclusiveGatewayInParamMapping {
             return results.get(0);
         }
         if (results.isEmpty()) {
+            LOGGER.warn("右侧参数[{}]在对应来源环节[{}]下未找到或者null值,返回", this.rightSideValue, this.rightSideNodeName);
             return null;
         }
         return results;
@@ -210,5 +220,21 @@ public class ExclusiveGatewayInParamMapping {
 
     public void setLeftSideValue(String leftSideValue) {
         this.leftSideValue = leftSideValue;
+    }
+
+    public String getLeftSideNodeName() {
+        return leftSideNodeName;
+    }
+
+    public void setLeftSideNodeName(String leftSideNodeName) {
+        this.leftSideNodeName = leftSideNodeName;
+    }
+
+    public String getRightSideNodeName() {
+        return rightSideNodeName;
+    }
+
+    public void setRightSideNodeName(String rightSideNodeName) {
+        this.rightSideNodeName = rightSideNodeName;
     }
 }

@@ -182,6 +182,8 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 JSONObject item = itemList.getJSONObject(k);
                 //左侧变量所属节点
                 String leftSideNodeKey = item.getString(ChatFlowConstant.ExclusiveGateway.ACT);
+                //左侧变量所属节点名称
+                String leftSideNodeName = item.getString(ChatFlowConstant.ExclusiveGateway.ACT_NAME);
                 //左侧引用的参数名
                 String leftSideValue = item.getString(ChatFlowConstant.ExclusiveGateway.NAME);
                 //比较符号
@@ -190,15 +192,19 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 String rightSideFrom = item.getString(ChatFlowConstant.ExclusiveGateway.FROM);
                 //右侧变量所属节点
                 String rightSideNodeKey = item.getString(ChatFlowConstant.ExclusiveGateway.NODE_KEY);
+                //右侧变量所属节点名称
+                String rightSideNodeName = item.getString(ChatFlowConstant.ExclusiveGateway.NODE_NAME);
                 //右侧引用的参数名或者输入值
                 String rightSideValue = item.getString(ChatFlowConstant.ExclusiveGateway.VALUE);
 
                 ExclusiveGatewayInParamMapping inParamMapping = new ExclusiveGatewayInParamMapping();
                 inParamMapping.setLeftSideNodeKey(leftSideNodeKey);
+                inParamMapping.setLeftSideNodeName(leftSideNodeName);
                 inParamMapping.setLeftSideValue(leftSideValue);
                 inParamMapping.setRightSideFrom(rightSideFrom);
                 inParamMapping.setRightSideNodeKey(rightSideNodeKey);
                 inParamMapping.setRightSideValue(rightSideValue);
+                inParamMapping.setRightSideNodeName(rightSideNodeName);
 
                 Object leftSideObject = inParamMapping.getLeftSideObject(flowMapValue);
                 boolean predicate = false;
@@ -297,11 +303,10 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 }
                 break;
             case "ne":
-                if (!Objects.equals(leftSideObject, rightSideObject)) {
-                    return true;
+                if (leftSideObject == null && rightSideObject == null) {
+                    return false;
                 }
-                //左和右不可能同时为null，所以此时有一个为null那就证明两个值不相等
-                if (leftSideObject == null) {
+                if (!Objects.equals(leftSideObject, rightSideObject)) {
                     return true;
                 }
                 //不相等的类型就不用比较了
