@@ -168,10 +168,7 @@ public class UserTaskExecutor extends ElementExecutor {
             //case2. multiple outgoings and calculate the next node with instanceDataMap
             nextNode = calculateNextNode(currentFlowElement, flowElementMap, runtimeContext.getInstanceDataMap());
         }
-        LOGGER.info("getExecuteExecutor.||nextNode={}||runtimeContext={}", nextNode, runtimeContext);
-
         runtimeContext.setCurrentNodeModel(nextNode);
-
         return executorFactory.getElementExecutor(nextNode);
     }
 }
