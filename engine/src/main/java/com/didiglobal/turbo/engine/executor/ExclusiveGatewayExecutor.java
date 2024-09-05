@@ -126,13 +126,24 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
      */
     @Override
     protected RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
-        FlowElement nextNode = calculateNextNode(runtimeContext.getCurrentNodeModel(),
-                runtimeContext.getFlowElementMap(), runtimeContext.getInstanceDataMap());
-
-        runtimeContext.setCurrentNodeModel(nextNode);
-        if (exclusiveGatewayLogService != null) {
-            exclusiveGatewayLogService.invoke(runtimeContext);
+        FlowElement nextNode = null;
+        Exception exception = null;
+        try {
+            nextNode = calculateNextNode(runtimeContext.getCurrentNodeModel(),
+                    runtimeContext.getFlowElementMap(), runtimeContext.getInstanceDataMap());
+        } catch (Exception e) {
+            exception = e;
+            String errorMsg = "分支计算失败。";
+            if (e.getMessage() != null) {
+                errorMsg += e.getMessage();
+            }
+            throw new RuntimeException(errorMsg, e);
+        } finally {
+            if (exclusiveGatewayLogService != null) {
+                exclusiveGatewayLogService.invoke(runtimeContext, nextNode, exception);
+            }
         }
+        runtimeContext.setCurrentNodeModel(nextNode);
         return executorFactory.getElementExecutor(nextNode);
     }
 
@@ -159,6 +170,9 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
 
         //读取分支条件
         JSONArray conditionList = (JSONArray) flowElement.getProperties().get(ChatFlowConstant.ExclusiveGateway.CONDITION_LIST);
+        if (conditionList == null) {
+            throw new IllegalArgumentException("无法获取分支条件");
+        }
 
         nextLoop:
         for (int i = 0; i < outgoingSize; i++) {
@@ -201,10 +215,12 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 inParamMapping.setLeftSideNodeKey(leftSideNodeKey);
                 inParamMapping.setLeftSideNodeName(leftSideNodeName);
                 inParamMapping.setLeftSideValue(leftSideValue);
+
                 inParamMapping.setRightSideFrom(rightSideFrom);
+
                 inParamMapping.setRightSideNodeKey(rightSideNodeKey);
-                inParamMapping.setRightSideValue(rightSideValue);
                 inParamMapping.setRightSideNodeName(rightSideNodeName);
+                inParamMapping.setRightSideValue(rightSideValue);
 
                 Object leftSideObject = inParamMapping.getLeftSideObject(flowMapValue);
                 boolean predicate = false;
