@@ -42,6 +42,10 @@ public class ServiceTaskExecutor extends ElementExecutor {
         // 向flowMap追加本轮nodeMap
         Map<String, InstanceData> dataMap = runtimeContext.getInstanceDataMap();
         JSONObject flowMap = (JSONObject) dataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
+        if (nodeMap.containsKey(ChatFlowConstant.InstanceKey.AGENT_MAP)) {
+            flowMap.put(ChatFlowConstant.InstanceKey.AGENT_MAP, nodeMap.get(ChatFlowConstant.InstanceKey.AGENT_MAP));
+            nodeMap.remove(ChatFlowConstant.InstanceKey.AGENT_MAP);
+        }
         flowMap.put(runtimeContext.getCurrentNodeInstance().getNodeKey(), nodeMap);
         // 数据持久化
         if (MapUtils.isNotEmpty(dataMap)) {
