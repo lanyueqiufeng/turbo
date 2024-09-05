@@ -1,5 +1,7 @@
 package com.didiglobal.turbo.engine.common;
 
+import java.text.MessageFormat;
+
 public class Constants {
 
     public static final int DEFAULT_TIMEOUT = 3000;
@@ -67,7 +69,13 @@ public class Constants {
         public static String SOURCE_TYPE_FIXED = "fixed";
     }
 
+    public static void main(String[] args) {
+        String s = MessageFormat.format(MODEL_DEFINITION_ERROR_MSG_FORMAT, "原因", "环节", "nodeKey");
+        System.out.println(s);
+    }
+
     public static final String NODE_INFO_FORMAT = "nodeKey={0}, nodeName={1}, nodeType={2}";
     public static final String NODE_INSTANCE_FORMAT = "nodeKey={0}, nodeName={1}, nodeInstanceId={2}";
-    public static final String MODEL_DEFINITION_ERROR_MSG_FORMAT = "message={0}, elementName={1}, elementKey={2}";
+    public static final String MODEL_DEFINITION_ERROR_MSG_FORMAT_BAK = "message={0}, elementName={1}, elementKey={2}";
+    public static final String MODEL_DEFINITION_ERROR_MSG_FORMAT = "环节 【{1}】 校验不通过，原因：【{0}】，关联的元素id：【{2}】 ";
 }

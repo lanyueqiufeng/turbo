@@ -153,7 +153,7 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         startProcessParam.setFlowDeployId(callActivityFlowDeployId);
         startProcessParam.setVariables(callActivityVariables);
         StartProcessResult startProcessResult = runtimeProcessor.startProcess(startProcessParam);
-        LOGGER.info("callActivity startProcess.||startProcessParam={}||startProcessResult={}", startProcessParam, startProcessResult);
+        LOGGER.info("子流程启动 ||启动入参={}||执行结果={}", startProcessParam, startProcessResult);
         // 5.save flowInstance mapping
         saveFlowInstanceMapping(runtimeContext, startProcessResult.getFlowInstanceId());
         handleCallActivityResult(runtimeContext, startProcessResult);
@@ -261,7 +261,7 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         commitTaskParam.setCallActivityFlowDeployId(runtimeContext.getCallActivityFlowDeployId());
         runtimeContext.setCallActivityFlowDeployId(null);
         CommitTaskResult commitTaskResult = runtimeProcessor.commit(commitTaskParam);
-        LOGGER.info("callActivity commit.||commitTaskParam={}||commitTaskResult={}", commitTaskParam, commitTaskResult);
+        LOGGER.info("提交子流程 ||commitTaskParam={}||commitTaskResult={}", commitTaskParam, commitTaskResult);
         handleCallActivityResult(runtimeContext, commitTaskResult);
     }
 

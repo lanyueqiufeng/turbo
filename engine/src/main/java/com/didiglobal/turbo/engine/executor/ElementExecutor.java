@@ -39,7 +39,7 @@ public abstract class ElementExecutor extends RuntimeExecutor {
         } catch (ReentrantException re) {
             LOGGER.warn("execute ReentrantException: reentrant execute.||runtimeContext={},", runtimeContext, re);
         } catch (SuspendException se) {
-            LOGGER.info("execute suspend.||runtimeContext={}", runtimeContext);
+            LOGGER.info("execute suspend.");
             throw se;
         } finally {
             postExecute(runtimeContext);

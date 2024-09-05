@@ -1,6 +1,5 @@
 package com.didiglobal.turbo.engine.processor;
 
-import com.alibaba.fastjson.JSON;
 import com.didiglobal.turbo.engine.common.ErrorEnum;
 import com.didiglobal.turbo.engine.common.FlowDefinitionStatus;
 import com.didiglobal.turbo.engine.common.FlowDeploymentStatus;
@@ -164,7 +163,6 @@ public class DefinitionProcessor {
         BeanUtils.copyProperties(flowDefinitionPO, flowModuleResult);
         Integer status = FlowModuleEnum.getStatusByDefinitionStatus(flowDefinitionPO.getStatus());
         flowModuleResult.setStatus(status);
-        LOGGER.info("getFlowModuleByFlowModuleId||flowModuleId={}||FlowModuleResult={}", flowModuleId, JSON.toJSONString(flowModuleResult));
         return flowModuleResult;
     }
 
@@ -178,7 +176,6 @@ public class DefinitionProcessor {
         BeanUtils.copyProperties(flowDeploymentPO, flowModuleResult);
         Integer status = FlowModuleEnum.getStatusByDeploymentStatus(flowDeploymentPO.getStatus());
         flowModuleResult.setStatus(status);
-        LOGGER.info("getFlowModuleByFlowDeployId||flowDeployId={}||response={}", flowDeployId, JSON.toJSONString(flowModuleResult));
         return flowModuleResult;
     }
 
