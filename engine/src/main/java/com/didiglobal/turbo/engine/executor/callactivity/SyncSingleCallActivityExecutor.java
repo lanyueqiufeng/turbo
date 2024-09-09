@@ -1,5 +1,6 @@
 package com.didiglobal.turbo.engine.executor.callactivity;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.didiglobal.turbo.engine.bo.NodeInstance;
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
@@ -17,12 +18,14 @@ import com.didiglobal.turbo.engine.result.CommitTaskResult;
 import com.didiglobal.turbo.engine.result.RollbackTaskResult;
 import com.didiglobal.turbo.engine.result.RuntimeResult;
 import com.didiglobal.turbo.engine.result.StartProcessResult;
+import com.didiglobal.turbo.engine.spi.SubFlowStartService;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -49,6 +52,9 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
 
     @Resource
     private ServiceTaskExecutor serviceTaskExecutor;
+
+    @Autowired(required = false)
+    private SubFlowStartService subFlowStartService;
 
     @Override
     protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {
@@ -142,17 +148,30 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         // 3.get flowModuleId
         String callActivityFlowModuleId = runtimeContext.getCallActivityFlowModuleId();
         String callActivityFlowDeployId = runtimeContext.getCallActivityFlowDeployId();
-        runtimeContext.setCallActivityFlowModuleId(null); // avoid misuse
+        // avoid misuse
+        runtimeContext.setCallActivityFlowModuleId(null);
         runtimeContext.setCallActivityFlowDeployId(null);
         // 4.calculate variables
         List<InstanceData> callActivityVariables = getCallActivityVariables(runtimeContext);
-
+        String subStartInputParam = JSON.toJSONString(InstanceDataUtil.changeInstanceDataToMap(callActivityVariables));
         StartProcessParam startProcessParam = new StartProcessParam();
         startProcessParam.setRuntimeContext(runtimeContext);
         startProcessParam.setFlowModuleId(callActivityFlowModuleId);
         startProcessParam.setFlowDeployId(callActivityFlowDeployId);
         startProcessParam.setVariables(callActivityVariables);
-        StartProcessResult startProcessResult = runtimeProcessor.startProcess(startProcessParam);
+        StartProcessResult startProcessResult;
+        long startTime = System.currentTimeMillis();
+        String subFlowInstanceId = null;
+        Exception exception = null;
+        try {
+            startProcessResult = runtimeProcessor.startProcess(startProcessParam);
+            subFlowInstanceId = startProcessResult.getFlowInstanceId();
+        } catch (Exception e) {
+            exception = e;
+            throw e;
+        }finally {
+            subFlowStartService.invoke(runtimeContext, subStartInputParam, subFlowInstanceId, exception, startTime);
+        }
         LOGGER.info("子流程启动 ||启动入参={}||执行结果={}", startProcessParam, startProcessResult);
         // 5.save flowInstance mapping
         saveFlowInstanceMapping(runtimeContext, startProcessResult.getFlowInstanceId());
