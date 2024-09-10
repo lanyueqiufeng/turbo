@@ -32,6 +32,11 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ExclusiveGatewayExecutor.class);
 
+    /**
+     * 存放出参的键
+     */
+    private static final String COMPARE_DETAILS_KEY = "$$CompareDetails";
+
     @Resource
     private ApplicationContext applicationContext;
 
@@ -128,8 +133,11 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
     protected RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
         FlowElement nextNode = null;
         Exception exception = null;
+        FlowElement currentNodeModel = runtimeContext.getCurrentNodeModel();
+        Map<String, Object> properties = currentNodeModel.getProperties();
         try {
-            nextNode = calculateNextNode(runtimeContext.getCurrentNodeModel(),
+            properties.put(COMPARE_DETAILS_KEY, new LinkedHashMap<String, Object>());
+            nextNode = calculateNextNode(currentNodeModel,
                     runtimeContext.getFlowElementMap(), runtimeContext.getInstanceDataMap());
         } catch (Exception e) {
             exception = e;
@@ -140,7 +148,8 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
             throw new RuntimeException(errorMsg, e);
         } finally {
             if (exclusiveGatewayLogService != null) {
-                exclusiveGatewayLogService.invoke(runtimeContext, nextNode, exception);
+                Map<String, Object> compareDetails = (Map<String, Object>) properties.remove(COMPARE_DETAILS_KEY);
+                exclusiveGatewayLogService.invoke(runtimeContext, compareDetails, nextNode, exception);
             }
         }
         runtimeContext.setCurrentNodeModel(nextNode);
@@ -167,7 +176,7 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
 
         List<String> outgoingList = flowElement.getOutgoing();
         int outgoingSize = outgoingList.size();
-
+        Map<String, List<Map<String, Object>>> compareDetails = (Map<String, List<Map<String, Object>>>) flowElement.getProperties().get(COMPARE_DETAILS_KEY);
         //读取分支条件
         JSONArray conditionList = (JSONArray) flowElement.getProperties().get(ChatFlowConstant.ExclusiveGateway.CONDITION_LIST);
         if (conditionList == null) {
@@ -176,6 +185,7 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
 
         nextLoop:
         for (int i = 0; i < outgoingSize; i++) {
+            List<Map<String, Object>> branchCompareDetails = new ArrayList<>();
             String outgoingKey = outgoingList.get(i);
             FlowElement outgoingSequenceFlow = FlowModelUtil.getFlowElement(flowElementMap, outgoingKey);
             //分支必须有至少一个出口，并且默认出口放到了最后
@@ -183,6 +193,7 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 defaultElement = outgoingSequenceFlow;
                 break;
             }
+            compareDetails.put("分支" + (i + 1), branchCompareDetails);
             JSONObject condition = conditionList.getJSONObject(i);
             //每个分支的条件集合
             JSONArray itemList = condition.getJSONArray(ChatFlowConstant.ExclusiveGateway.ITEM_LIST);
@@ -223,18 +234,26 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 inParamMapping.setRightSideValue(rightSideValue);
 
                 Object leftSideObject = inParamMapping.getLeftSideObject(flowMapValue);
+                Map<String, Object> compareDetail = new LinkedHashMap<>();
+                compareDetail.put("左侧值", leftSideObject);
+                compareDetail.put("比较条件", translate(itemOperator));
+                branchCompareDetails.add(compareDetail);
                 boolean predicate = false;
                 if (Objects.equals("isNull", itemOperator)) {
                     predicate = Objects.isNull(leftSideObject);
+                    compareDetail.put("比较结果", predicate);
                 } else if (Objects.equals("isNotNull", itemOperator)) {
                     predicate = !Objects.isNull(leftSideObject);
+                    compareDetail.put("比较结果", predicate);
                 } else {
                     Object rightSideObject = inParamMapping.getRightSideObject(flowMapValue);
+                    compareDetail.put("右侧值", rightSideObject);
                     if (Objects.equals(rightSideFrom, ChatFlowConstant.ExclusiveGateway.REFERENCE)) {
-                        predicate = predicateWhenValueIsPassed(itemOperator, leftSideObject, rightSideObject);
+                        predicate = predicateWhenValueIsPassed(itemOperator, leftSideObject, rightSideObject, true);
                     } else {
                         predicate = predicateWhenValueIsInput(itemOperator, leftSideObject, (String) rightSideObject);
                     }
+                    compareDetail.put("比较结果", predicate);
                 }
                 if (operator.equals("and")) {
                     if (!predicate) {
@@ -299,9 +318,11 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
      * @param rightSideObject 右侧值
      * @return
      */
-    private boolean predicateWhenValueIsPassed(String operator, Object leftSideObject, Object rightSideObject) {
+    private boolean predicateWhenValueIsPassed(String operator, Object leftSideObject, Object rightSideObject, boolean isFirst) {
         switch (operator) {
             case "eq":
+                //不相等的类型就不用比较了
+                typeCheck(leftSideObject, rightSideObject, isFirst);
                 if (Objects.equals(leftSideObject, rightSideObject)) {
                     return true;
                 }
@@ -309,32 +330,15 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 if (leftSideObject == null || rightSideObject == null) {
                     return false;
                 }
-                //不相等的类型就不用比较了
-                if (!leftSideObject.getClass().equals(rightSideObject.getClass())) {
-                    return false;
-                }
                 //如果是数组，那就比较数组内的元素
-                if (leftSideObject instanceof List) {
-                    return leftSideObject.toString().equals(rightSideObject.toString());
+                if (leftSideObject instanceof Collection) {
+                    return collectionCompare((Collection) leftSideObject, (Collection) rightSideObject);
                 }
                 break;
             case "ne":
-                if (leftSideObject == null && rightSideObject == null) {
-                    return false;
-                }
-                if (!Objects.equals(leftSideObject, rightSideObject)) {
-                    return true;
-                }
-                //不相等的类型就不用比较了
-                if (!leftSideObject.getClass().equals(rightSideObject.getClass())) {
-                    return true;
-                }
-                //如果是数组，那就比较数组内的元素
-                if (leftSideObject instanceof List) {
-                    return !leftSideObject.toString().equals(rightSideObject.toString());
-                }
-                break;
+                return !predicateWhenValueIsPassed("eq", leftSideObject, rightSideObject, isFirst);
             case "in":
+                typeCheck(leftSideObject, rightSideObject, isFirst);
                 //只有三种情况才算包含
                 //1、两者都是字符串且左包含右
                 if (leftSideObject instanceof String && rightSideObject instanceof String && ((String) leftSideObject).contains(rightSideObject.toString())) {
@@ -349,49 +353,20 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                     //3、左是数组，且数组的某个子项与右相等
                     List valueArray = (List) leftSideObject;
                     for (Object valueItem : valueArray) {
-                        if (predicateWhenValueIsPassed("eq", valueItem, rightSideObject)) {
+                        if (predicateWhenValueIsPassed("eq", valueItem, rightSideObject, false)) {
                             return true;
                         }
                     }
                 }
                 break;
             case "notIn":
-                //只有三种情况才算包含，其他都是不包含
-                //1、两者都是字符串且左包含右
-                if (leftSideObject instanceof String && rightSideObject instanceof String && ((String) leftSideObject).contains(rightSideObject.toString())) {
-                    return false;
-                }
-                if (leftSideObject instanceof List) {
-                    //2、左和右都是数组,且左包含右
-                    if (rightSideObject instanceof List && Collections.indexOfSubList((List) leftSideObject, (List) rightSideObject) != -1) {
-                        return false;
-                    }
-                    //3、左是数组，且数组的某个子项与右相等
-                    List valueArray = (List) leftSideObject;
-                    for (Object valueItem : valueArray) {
-                        if (predicateWhenValueIsPassed("eq", valueItem, rightSideObject)) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
+                return !predicateWhenValueIsPassed("in", leftSideObject, rightSideObject, isFirst);
             case "gt":
             case "gte":
             case "lt":
             case "lte":
-                if (!(rightSideObject instanceof Integer) || !(leftSideObject instanceof Integer)) {
-                    return false;
-                }
-                if (operator.equals("gt")) {
-                    return (Integer) leftSideObject > (Integer) rightSideObject;
-                } else if (operator.equals("gte")) {
-                    return (Integer) leftSideObject >= (Integer) rightSideObject;
-                } else if (operator.equals("lt")) {
-                    return (Integer) leftSideObject < (Integer) rightSideObject;
-                } else if (operator.equals("lte")) {
-                    return (Integer) leftSideObject <= (Integer) rightSideObject;
-                }
-                break;
+                //如果值是字符串，那就先转成数字再比较
+                return numCompare(leftSideObject, rightSideObject, operator);
             default:
                 throw new IllegalArgumentException("无法解析的比较符号:" + operator);
         }
@@ -425,18 +400,7 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 }
                 break;
             case "ne":
-                //左和右不可能同时为null，所以此时有一个为null那就证明两个值不相等
-                if (leftSideObject == null || rightSideObject == null) {
-                    return true;
-                }
-                //右不可输入为数组
-                if (leftSideObject instanceof List) {
-                    return true;
-                }
-                if (!Objects.equals(leftSideObject.toString(), rightSideObject)) {
-                    return true;
-                }
-                break;
+                return !predicateWhenValueIsInput("eq", leftSideObject, rightSideObject);
             case "in":
                 //只有两种情况才算包含
                 //1、两者都是字符串且左包含右
@@ -454,45 +418,137 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 }
                 break;
             case "notIn":
-                //只有两种情况才算包含，其他都是不包含
-                //1、两者都是字符串且左包含右
-                if (leftSideObject instanceof String && rightSideObject != null && ((String) leftSideObject).contains(rightSideObject)) {
-                    return false;
-                }
-                //2、左是数组，且数组的某个子项与右相等
-                if (leftSideObject instanceof List) {
-                    List valueArray = (List) leftSideObject;
-                    for (Object valueItem : valueArray) {
-                        if (predicateWhenValueIsPassed("eq", valueItem, rightSideObject)) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
+                return !predicateWhenValueIsInput("in", leftSideObject, rightSideObject);
             case "gt":
             case "gte":
             case "lt":
             case "lte":
-                if (rightSideObject == null) {
-                    return false;
-                }
-                if (!(leftSideObject instanceof Integer) || !rightSideObject.matches("-?\\d+")) {
-                    return false;
-                }
-                int parsed = Integer.parseInt(rightSideObject);
-                if (operator.equals("gt")) {
-                    return (Integer) leftSideObject > parsed;
-                } else if (operator.equals("gte")) {
-                    return (Integer) leftSideObject >= parsed;
-                } else if (operator.equals("lt")) {
-                    return (Integer) leftSideObject < parsed;
-                } else if (operator.equals("lte")) {
-                    return (Integer) leftSideObject <= parsed;
-                }
-                break;
+                return numCompare(leftSideObject, rightSideObject, operator);
             default:
                 throw new IllegalArgumentException("无法解析的比较符号:" + operator);
         }
         return false;
+    }
+
+    private boolean isIntOrLong(String num) {
+        return num.matches("-?\\d+");
+    }
+
+    /**
+     * 类型检查
+     */
+    private void typeCheck(Object leftSideObject, Object rightSideObject, boolean needThrowException) {
+        if (!needThrowException) {
+            return;
+        }
+        if (leftSideObject == null || rightSideObject == null) {
+            return;
+        }
+        if (leftSideObject instanceof Collection && rightSideObject instanceof Collection) {
+            return;
+        }
+        if (leftSideObject instanceof Number && rightSideObject instanceof Number) {
+            return;
+        }
+        if (leftSideObject instanceof Map && rightSideObject instanceof Map) {
+            return;
+        }
+        if (!leftSideObject.getClass().equals(rightSideObject.getClass())) {
+            throw new IllegalArgumentException("类型不一致，无法比较。其中，左侧值为" + leftSideObject.getClass().getName() + "类型,右侧值为" + rightSideObject.getClass().getName() + "类型。");
+        }
+    }
+
+    /**
+     * 比较集合类型
+     */
+    private boolean collectionCompare(Collection<?> leftSideObject, Collection<?> rightSideObject) {
+        if (leftSideObject.size() != rightSideObject.size()) {
+            return false;
+        }
+        Iterator<?> leftIter = leftSideObject.iterator();
+        Iterator<?> rightIter = rightSideObject.iterator();
+        while (leftIter.hasNext()) {
+            if (!Objects.equals(leftIter.next(), rightIter.next())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 比较整数
+     */
+    private boolean numCompare(Object leftSideObject, Object rightSideObject, String operator) {
+        //如果值是字符串，那就先转成数字再比较
+        if (leftSideObject == null) {
+            throw new IllegalArgumentException("左侧值为null，无法进行比较");
+        }
+        if (rightSideObject == null) {
+            throw new IllegalArgumentException("右侧值为null，无法进行比较");
+        }
+        Long leftValue = null;
+        Long rightValue = null;
+        if (leftSideObject instanceof String) {
+            if (isIntOrLong((String) leftSideObject)) {
+                leftValue = Long.parseLong((String) leftSideObject);
+            } else {
+                throw new IllegalArgumentException("左侧值不是整数类型字符串，无法比较");
+            }
+        } else if (leftSideObject instanceof Integer || leftSideObject instanceof Long) {
+            leftValue = Long.valueOf(leftSideObject.toString());
+        } else {
+            throw new IllegalArgumentException("左侧值为" + leftSideObject.getClass().getName() + "类型，不支持比较");
+        }
+        if (rightSideObject instanceof String) {
+            if (isIntOrLong((String) rightSideObject)) {
+                rightValue = Long.parseLong((String) rightSideObject);
+            } else {
+                throw new IllegalArgumentException("右侧值不是整数类型字符串，无法比较");
+            }
+        } else if (rightSideObject instanceof Integer || rightSideObject instanceof Long) {
+            rightValue = Long.valueOf(rightSideObject.toString());
+        } else {
+            throw new IllegalArgumentException("右侧值为" + rightSideObject.getClass().getName() + "类型，不支持比较");
+        }
+        if (operator.equals("gt")) {
+            return leftValue > rightValue;
+        } else if (operator.equals("gte")) {
+            return leftValue >= rightValue;
+        } else if (operator.equals("lt")) {
+            return leftValue < rightValue;
+        } else if (operator.equals("lte")) {
+            return leftValue <= rightValue;
+        }
+        return false;
+    }
+
+    /**
+     * 包装比较符号
+     */
+    private String translate(String operator) {
+        switch (operator) {
+            case "eq":
+                return "等于";
+            case "ne":
+                return "不等于";
+            case "in":
+                return "包含";
+            case "notIn":
+                return "不包含";
+            case "gt":
+                return "大于";
+            case "gte":
+                return "大于等于";
+            case "lt":
+                return "小于";
+            case "lte":
+                return "小于等于";
+            case "isNull":
+                return "等于空";
+            case "isNotNull":
+                return "不等于空";
+            default:
+                return operator;
+        }
     }
 }

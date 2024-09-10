@@ -3,6 +3,8 @@ package com.didiglobal.turbo.engine.spi;
 import com.didiglobal.turbo.engine.common.RuntimeContext;
 import com.didiglobal.turbo.engine.model.FlowElement;
 
+import java.util.Map;
+
 /**
  * <p> HookService </p>
  *
@@ -19,5 +21,5 @@ public interface ExclusiveGatewayLogService {
      * @param nextNode       下一个节点
      * @param exception      分支计算异常
      */
-    void invoke(RuntimeContext runtimeContext, FlowElement nextNode, Exception exception);
+    void invoke(RuntimeContext runtimeContext, Map<String, Object> compareDetails, FlowElement nextNode, Exception exception);
 }
