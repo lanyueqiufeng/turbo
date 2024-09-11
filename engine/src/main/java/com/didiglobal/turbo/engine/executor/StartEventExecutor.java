@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.util.Collections;
 
 @Service
@@ -19,13 +20,17 @@ public class StartEventExecutor extends ElementExecutor {
     @Autowired(required = false)
     private StartEventExecuteService startEventExecuteService;
 
+    @Resource
+    private ServiceTaskExecutor serviceTaskExecutor;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(StartEventExecutor.class);
 
     @Override
     protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {
         if (startEventExecuteService != null) {
             startEventExecuteService.invoke(runtimeContext);
-        }
+            String instanceDataId = serviceTaskExecutor.saveInstanceDataPO(runtimeContext);
+            runtimeContext.setInstanceDataId(instanceDataId); }
     }
 
     @Override

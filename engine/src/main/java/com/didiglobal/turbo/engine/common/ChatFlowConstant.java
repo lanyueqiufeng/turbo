@@ -15,6 +15,7 @@ public interface ChatFlowConstant {
         String FLOW_MAP = "flowMap";
         String AGENT_MAP = "$agent";
         String SESSION_ID = "sessionId";
+        String LAST_INPUT = "lastInput";
     }
 
     interface PropKey {

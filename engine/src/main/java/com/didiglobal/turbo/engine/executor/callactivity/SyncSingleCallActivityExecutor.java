@@ -358,18 +358,31 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         Map<String, InstanceData> mainInstanceDataMap = InstanceDataUtil.getInstanceDataMap(instanceDataDAO.select(runtimeContext.getFlowInstanceId(), runtimeContext.getInstanceDataId()).getInstanceData());
         mainInstanceDataMap.putAll(InstanceDataUtil.getInstanceDataMap(instanceDataFromSubFlow));
         runtimeContext.setInstanceDataMap(mainInstanceDataMap);
+        // 主流程流程参数
+        JSONObject flowMap = (JSONObject) mainInstanceDataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
         // update: 将子流程end环节出参  绑定给对应子流程环节的出参
-        List<InstanceData> subFlowInstanceData = runtimeResult.getVariables();
-        for (InstanceData instanceData : subFlowInstanceData) {
-            if (instanceData.getKey().equals(ChatFlowConstant.InstanceKey.END_OUTPUT)) {
-                // 取出子流程出参
-                String nodeKey = runtimeContext.getCurrentNodeInstance().getNodeKey();
-                JSONObject flowMap = (JSONObject) mainInstanceDataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
-                // 放入父流程对应环节上
-                flowMap.put(nodeKey, instanceData.getValue());
-                break;
-            }
+        Map<String, Object> subFlowInstanceData = InstanceDataUtil.changeInstanceDataToMap(runtimeResult.getVariables());
+        if (subFlowInstanceData.containsKey(ChatFlowConstant.InstanceKey.END_OUTPUT)) {
+            // 取出子流程出参
+            String nodeKey = runtimeContext.getCurrentNodeInstance().getNodeKey();
+            // 放入父流程对应环节上
+            flowMap.put(nodeKey, subFlowInstanceData.get(ChatFlowConstant.InstanceKey.END_OUTPUT));
         }
+        // 传递全局参数
+        if (subFlowInstanceData.containsKey(ChatFlowConstant.InstanceKey.AGENT_MAP)) {
+            flowMap.put(ChatFlowConstant.InstanceKey.AGENT_MAP, subFlowInstanceData.get(ChatFlowConstant.InstanceKey.AGENT_MAP));
+        }
+        // for (InstanceData instanceData : subFlowInstanceData) {
+        //     if (instanceData.getKey().equals(ChatFlowConstant.InstanceKey.END_OUTPUT)) {
+        //         // 取出子流程出参
+        //         String nodeKey = runtimeContext.getCurrentNodeInstance().getNodeKey();
+        //         // 放入父流程对应环节上
+        //         flowMap.put(nodeKey, instanceData.getValue());
+        //     }
+        //     if (instanceData.getKey().equals(ChatFlowConstant.InstanceKey.AGENT_MAP)) {
+        //         flowMap.put(ChatFlowConstant.InstanceKey.AGENT_MAP, instanceData.getValue());
+        //     }
+        // }
         // 2.save data
         String instanceDataId = genId();
         InstanceDataPO instanceDataPO = buildCallActivityEndInstanceData(instanceDataId, runtimeContext);
