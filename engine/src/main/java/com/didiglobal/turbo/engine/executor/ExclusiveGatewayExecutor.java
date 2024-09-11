@@ -1,5 +1,6 @@
 package com.didiglobal.turbo.engine.executor;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
@@ -16,6 +17,7 @@ import com.didiglobal.turbo.engine.util.InstanceDataUtil;
 import com.google.common.collect.Lists;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.ibatis.annotations.Case;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -25,6 +27,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.lang.reflect.Array;
 import java.util.*;
 
 @Service
@@ -239,22 +242,18 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 compareDetail.put("比较条件", translate(itemOperator));
                 branchCompareDetails.add(compareDetail);
                 boolean predicate = false;
-                if (Objects.equals("isNull", itemOperator)) {
-                    predicate = Objects.isNull(leftSideObject);
-                    compareDetail.put("比较结果", predicate);
-                } else if (Objects.equals("isNotNull", itemOperator)) {
-                    predicate = !Objects.isNull(leftSideObject);
-                    compareDetail.put("比较结果", predicate);
-                } else {
-                    Object rightSideObject = inParamMapping.getRightSideObject(flowMapValue);
+                Object rightSideObject = null;
+                if (!Objects.equals("isNull", itemOperator) && !Objects.equals("isNotNull", itemOperator)) {
+                    rightSideObject = inParamMapping.getRightSideObject(flowMapValue);
                     compareDetail.put("右侧值", rightSideObject);
-                    if (Objects.equals(rightSideFrom, ChatFlowConstant.ExclusiveGateway.REFERENCE)) {
-                        predicate = predicateWhenValueIsPassed(itemOperator, leftSideObject, rightSideObject, true);
-                    } else {
-                        predicate = predicateWhenValueIsInput(itemOperator, leftSideObject, (String) rightSideObject);
-                    }
-                    compareDetail.put("比较结果", predicate);
                 }
+                if (Objects.equals(rightSideFrom, ChatFlowConstant.ExclusiveGateway.REFERENCE)) {
+                    predicate = predicateWhenValueIsPassed(itemOperator, leftSideObject, rightSideObject, true);
+                } else {
+                    predicate = predicateWhenValueIsInput(itemOperator, leftSideObject, (String) rightSideObject);
+                }
+                compareDetail.put("比较结果", predicate);
+
                 if (operator.equals("and")) {
                     if (!predicate) {
                         continue nextLoop;
@@ -367,6 +366,10 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
             case "lte":
                 //如果值是字符串，那就先转成数字再比较
                 return numCompare(leftSideObject, rightSideObject, operator);
+            case "isNull":
+                return isEmptyContent(leftSideObject);
+            case "isNotNull":
+                return !predicateWhenValueIsPassed("isNull", leftSideObject, null, isFirst);
             default:
                 throw new IllegalArgumentException("无法解析的比较符号:" + operator);
         }
@@ -424,6 +427,10 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
             case "lt":
             case "lte":
                 return numCompare(leftSideObject, rightSideObject, operator);
+            case "isNull":
+                return isEmptyContent(leftSideObject);
+            case "isNotNull":
+                return !predicateWhenValueIsInput("isNull", leftSideObject, null);
             default:
                 throw new IllegalArgumentException("无法解析的比较符号:" + operator);
         }
@@ -432,6 +439,22 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
 
     private boolean isIntOrLong(String num) {
         return num.matches("-?\\d+");
+    }
+
+    private boolean isEmptyContent(Object obj){
+        if (Objects.isNull(obj)) {
+            return true;
+        }
+        if (obj instanceof Collection && ((Collection) obj).isEmpty()) {
+            return true;
+        }
+        if (obj instanceof Map && ((Map) obj).isEmpty()) {
+            return true;
+        }
+        if (obj instanceof String && StringUtils.isBlank((String) obj)) {
+            return true;
+        }
+        return false;
     }
 
     /**
