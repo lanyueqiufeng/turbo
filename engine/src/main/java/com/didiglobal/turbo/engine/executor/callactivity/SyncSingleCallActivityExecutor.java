@@ -365,12 +365,11 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         if (subFlowInstanceData.containsKey(ChatFlowConstant.InstanceKey.END_OUTPUT)) {
             // 取出子流程出参
             String nodeKey = runtimeContext.getCurrentNodeInstance().getNodeKey();
+            JSONObject endNodeData = (JSONObject) subFlowInstanceData.get(ChatFlowConstant.InstanceKey.END_OUTPUT);
             // 放入父流程对应环节上
-            flowMap.put(nodeKey, subFlowInstanceData.get(ChatFlowConstant.InstanceKey.END_OUTPUT));
-        }
-        // 传递全局参数
-        if (subFlowInstanceData.containsKey(ChatFlowConstant.InstanceKey.AGENT_MAP)) {
-            flowMap.put(ChatFlowConstant.InstanceKey.AGENT_MAP, subFlowInstanceData.get(ChatFlowConstant.InstanceKey.AGENT_MAP));
+            flowMap.put(nodeKey, endNodeData);
+            // 传递全局参数
+            flowMap.put(ChatFlowConstant.InstanceKey.AGENT_MAP, endNodeData.get(ChatFlowConstant.InstanceKey.AGENT_MAP));
         }
         // for (InstanceData instanceData : subFlowInstanceData) {
         //     if (instanceData.getKey().equals(ChatFlowConstant.InstanceKey.END_OUTPUT)) {
