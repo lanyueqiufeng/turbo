@@ -14,4 +14,11 @@ public interface UserTaskExecuteService {
      * @param runtimeContext 运行时上下文
      */
     void commitInvoke(RuntimeContext runtimeContext);
+
+    /**
+     * 走到用户环节时  挂起前的钩子  做一些日志记录
+     *
+     * @param runtimeContext
+     */
+    void executeInvoke(RuntimeContext runtimeContext);
 }

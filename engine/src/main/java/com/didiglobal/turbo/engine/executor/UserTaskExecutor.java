@@ -48,6 +48,9 @@ public class UserTaskExecutor extends ElementExecutor {
         String nodeName = FlowModelUtil.getElementName(flowElement);
         LOGGER.info("doExecute: userTask to commit.||flowInstanceId={}||nodeInstanceId={}||nodeKey={}||nodeName={}",
                 runtimeContext.getFlowInstanceId(), currentNodeInstance.getNodeInstanceId(), flowElement.getKey(), nodeName);
+        if (userTaskExecuteService != null) {
+            userTaskExecuteService.executeInvoke(runtimeContext);
+        }
         throw new SuspendException(ErrorEnum.COMMIT_SUSPEND, MessageFormat.format(Constants.NODE_INSTANCE_FORMAT,
                 flowElement.getKey(), nodeName, currentNodeInstance.getNodeInstanceId()));
     }
