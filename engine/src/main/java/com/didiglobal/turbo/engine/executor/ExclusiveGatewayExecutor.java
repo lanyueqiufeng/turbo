@@ -154,7 +154,7 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
                 throw new IllegalStateException();
             }
         } catch (IllegalStateException e) {
-            throw new RuntimeException(String.format("从分支节点%s到节点%s循环执行次数已达%d次，终止执行流程！",
+            throw new RuntimeException(String.format("从分支节点【%s】到节点【%s】循环执行次数已达%d次，终止执行流程！",
                     currentNodeModel.getProperties().get("name"), nextNode.getProperties().get("name"), MAX_LOOP));
         } catch (Exception e) {
             exception = e;
