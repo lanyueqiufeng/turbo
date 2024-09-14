@@ -34,10 +34,6 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
     private static final Logger LOGGER = LoggerFactory.getLogger(ExclusiveGatewayExecutor.class);
 
     /**
-     * 分支循环最大次数
-     */
-    private static final int MAX_LOOP = 50;
-    /**
      * 存放出参的键
      */
     private static final String COMPARE_DETAILS_KEY = "$$CompareDetails";
@@ -145,17 +141,6 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
             properties.put(COMPARE_DETAILS_KEY, new LinkedHashMap<String, Object>());
             nextNode = calculateNextNode(currentNodeModel,
                     runtimeContext.getFlowElementMap(), instanceDataMap);
-            InstanceData instanceData = instanceDataMap.get(ChatFlowConstant.InstanceKey.START_OUTPUT);
-            JSONObject instanceDataValue = (JSONObject) instanceData.getValue();
-            Map<String, Integer> loopCounter = instanceDataValue.getObject(ChatFlowConstant.ExclusiveGateway.LOOP_COUNT, Map.class);
-            Integer loopNum = loopCounter.merge(nextNode.getKey(), 1, Integer::sum);
-            if (loopNum >= MAX_LOOP) {
-                LOGGER.error("循环计数信息:{}", JSON.toJSONString(loopCounter));
-                throw new IllegalStateException();
-            }
-        } catch (IllegalStateException e) {
-            throw new RuntimeException(String.format("从分支节点【%s】到节点【%s】循环执行次数已达%d次，终止执行流程！",
-                    currentNodeModel.getProperties().get("name"), nextNode.getProperties().get("name"), MAX_LOOP));
         } catch (Exception e) {
             exception = e;
             String errorMsg = "分支计算失败。";
