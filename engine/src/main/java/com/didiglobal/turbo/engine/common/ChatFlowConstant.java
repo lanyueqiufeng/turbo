@@ -95,6 +95,10 @@ public interface ChatFlowConstant {
          */
         String VALUE = "value";
         String REFERENCE = "Reference";
+        /**
+         * 记录分支循环次数
+         */
+        String LOOP_COUNT = "LoopCount";
     }
 
 }
