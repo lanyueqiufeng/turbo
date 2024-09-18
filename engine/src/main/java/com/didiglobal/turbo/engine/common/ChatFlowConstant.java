@@ -12,6 +12,7 @@ public interface ChatFlowConstant {
         String INPUT = "input";
         String MSG_TYPE = "msgType";
         String OPTION = "option";
+        String USER_ID = "userId";
         String FLOW_MAP = "flowMap";
         String AGENT_MAP = "$agent";
         String SESSION_ID = "sessionId";
