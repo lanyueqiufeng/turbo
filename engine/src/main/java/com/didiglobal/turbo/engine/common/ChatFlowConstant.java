@@ -52,6 +52,19 @@ public interface ChatFlowConstant {
         // 固定子流程
         String FLOW = "flow";
         String DYNAMIC_FLOW = "dynamic_flow";
+        // 分支环节
+        String BRANCH = "branch";
+        // 消息回复
+        String MSG_REPLY = "msg_reply";
+        // 用户输入
+        String USER_INPUT = "user_input";
+        // 开始
+        String START = "start";
+        // 结束
+        String END = "end";
+        // 线
+        String SEQUENCE = "sequence";
+
     }
 
     interface ExclusiveGateway {

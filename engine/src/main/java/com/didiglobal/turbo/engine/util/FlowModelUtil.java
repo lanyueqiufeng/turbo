@@ -1,6 +1,7 @@
 package com.didiglobal.turbo.engine.util;
 
 import com.alibaba.fastjson.JSONObject;
+import com.didiglobal.turbo.engine.common.ChatFlowConstant;
 import com.didiglobal.turbo.engine.common.Constants;
 import com.didiglobal.turbo.engine.common.FlowElementType;
 import com.didiglobal.turbo.engine.model.FlowElement;
@@ -141,4 +142,32 @@ public class FlowModelUtil {
         }
         return StringUtils.defaultString((String) properties.get(Constants.ELEMENT_PROPERTIES.NAME), StringUtils.EMPTY);
     }
+
+
+    public static String getElementType(FlowElement flowElement) {
+        String elementType = null;
+        if (flowElement != null) {
+            int type = flowElement.getType();
+            if (FlowElementType.SEQUENCE_FLOW == type) {
+                elementType = ChatFlowConstant.NodeType.SEQUENCE;
+            } else if (FlowElementType.START_EVENT == type) {
+                elementType = ChatFlowConstant.NodeType.START;
+            } else if (FlowElementType.END_EVENT == type) {
+                elementType = ChatFlowConstant.NodeType.END;
+            } else if (FlowElementType.USER_TASK == type) {
+                elementType = ChatFlowConstant.NodeType.USER_INPUT;
+            } else if (FlowElementType.EXCLUSIVE_GATEWAY == type) {
+                elementType = ChatFlowConstant.NodeType.BRANCH;
+            } else if (FlowElementType.REPLY_NODE == type) {
+                elementType = ChatFlowConstant.NodeType.MSG_REPLY;
+            } else if (FlowElementType.CALL_ACTIVITY == type) {
+                elementType = (String) flowElement.getProperties().get(ChatFlowConstant.PropKey.NODE_TYPE);
+            } else if (FlowElementType.SERVICE_TASK == type) {
+                elementType = (String) flowElement.getProperties().get(ChatFlowConstant.PropKey.NODE_TYPE);
+            }
+        }
+        return elementType;
+    }
+
+
 }

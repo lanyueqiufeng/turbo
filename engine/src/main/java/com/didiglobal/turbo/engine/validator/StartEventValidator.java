@@ -20,11 +20,11 @@ public class StartEventValidator extends ElementValidator {
      * @param flowElementMap, flowElement
      */
     @Override
-    public void checkIncoming(Map<String, FlowElement> flowElementMap, FlowElement flowElement) {
+    public void checkIncoming(Map<String, FlowElement> flowElementMap, FlowElement flowElement, Boolean isNotFormat) {
         List<String> incoming = flowElement.getIncoming();
 
         if (CollectionUtils.isNotEmpty(incoming)) {
-            recordElementValidatorException(flowElement, ErrorEnum.ELEMENT_TOO_MUCH_INCOMING);
+            recordElementValidatorException(flowElement, ErrorEnum.ELEMENT_TOO_MUCH_INCOMING,isNotFormat);
         }
     }
 }

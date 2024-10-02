@@ -1,5 +1,6 @@
 package com.didiglobal.turbo.engine.validator;
 
+import com.didiglobal.turbo.engine.common.ChatFlowConstant;
 import com.didiglobal.turbo.engine.common.Constants;
 import com.didiglobal.turbo.engine.common.ErrorEnum;
 import com.didiglobal.turbo.engine.common.FlowElementType;
@@ -8,6 +9,7 @@ import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.FlowModel;
 import com.didiglobal.turbo.engine.param.CommonParam;
+import com.didiglobal.turbo.engine.result.CheckFlowItemVo;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.google.common.collect.Maps;
 import org.apache.commons.collections4.CollectionUtils;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -79,5 +82,76 @@ public class FlowModelValidator {
             LOGGER.warn("message={}", ErrorEnum.END_NODE_INVALID.getErrMsg());
             throw new DefinitionException(ErrorEnum.END_NODE_INVALID);
         }
+    }
+
+    /**
+     * 改造{@link #validate}
+     * 抛出异常 —> 返回元素错误信息
+     **/
+    public List<CheckFlowItemVo> check(FlowModel flowModel) throws ProcessException, DefinitionException {
+        List<CheckFlowItemVo> checkItemVos = new ArrayList<>();
+        if (flowModel == null || CollectionUtils.isEmpty(flowModel.getFlowElementList())) {
+            throw new DefinitionException(ErrorEnum.MODEL_EMPTY);
+        }
+
+        List<FlowElement> flowElementList = flowModel.getFlowElementList();
+        Map<String, FlowElement> flowElementMap = Maps.newHashMap();
+
+        for (FlowElement flowElement : flowElementList) {
+            if (flowElementMap.containsKey(flowElement.getKey())) {
+                String elementName = FlowModelUtil.getElementName(flowElement);
+                String elementKey = flowElement.getKey();
+                String exceptionMsg = MessageFormat.format(Constants.MODEL_DEFINITION_ERROR_MSG_FORMAT,
+                        ErrorEnum.ELEMENT_KEY_NOT_UNIQUE, elementName, elementKey);
+                throw new DefinitionException(ErrorEnum.ELEMENT_KEY_NOT_UNIQUE.getErrNo(), exceptionMsg);
+            }
+            flowElementMap.put(flowElement.getKey(), flowElement);
+        }
+
+
+        int startEventCount = 0;
+        int endEventCount = 0;
+
+        for (FlowElement flowElement : flowElementList) {
+
+            ElementValidator elementValidator = elementValidatorFactory.getElementValidator(flowElement);
+            try {
+                elementValidator.check(flowElementMap, flowElement);
+            } catch (DefinitionException e) {
+                CheckFlowItemVo checkItemVo = new CheckFlowItemVo();
+                checkItemVo.setElementKey(flowElement.getKey());
+                checkItemVo.setElementType(FlowModelUtil.getElementType(flowElement));
+                checkItemVo.setElementName(FlowModelUtil.getElementName(flowElement));
+                checkItemVo.setExceptionMsg(e.getErrMsg());
+                checkItemVo.setErrNo(e.getErrNo());
+                checkItemVos.add(checkItemVo);
+            }
+            if (FlowElementType.START_EVENT == flowElement.getType()) {
+                startEventCount++;
+            }
+
+            if (FlowElementType.END_EVENT == flowElement.getType()) {
+                endEventCount++;
+            }
+        }
+
+        if (startEventCount != 1) {
+            CheckFlowItemVo checkItemVo = new CheckFlowItemVo();
+            checkItemVo.setElementName("START_EVENT");
+            checkItemVo.setExceptionMsg(ErrorEnum.START_NODE_INVALID.getErrMsg());
+            checkItemVo.setErrNo(ErrorEnum.START_NODE_INVALID.getErrNo());
+            checkItemVo.setElementType(ChatFlowConstant.NodeType.START);
+            checkItemVos.add(checkItemVo);
+        }
+
+        if (endEventCount < 1) {
+            CheckFlowItemVo checkItemVo = new CheckFlowItemVo();
+            checkItemVo.setElementName("END_EVENT");
+            checkItemVo.setExceptionMsg(ErrorEnum.END_NODE_INVALID.getErrMsg());
+            checkItemVo.setElementType(ChatFlowConstant.NodeType.END);
+            checkItemVo.setErrNo(ErrorEnum.END_NODE_INVALID.getErrNo());
+            checkItemVos.add(checkItemVo);
+        }
+        return checkItemVos;
     }
 }

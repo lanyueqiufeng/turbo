@@ -3,8 +3,10 @@ package com.didiglobal.turbo.engine.validator;
 import com.didiglobal.turbo.engine.common.ErrorEnum;
 import com.didiglobal.turbo.engine.exception.DefinitionException;
 import com.didiglobal.turbo.engine.exception.ProcessException;
+import com.didiglobal.turbo.engine.exception.TurboException;
 import com.didiglobal.turbo.engine.model.FlowModel;
 import com.didiglobal.turbo.engine.param.CommonParam;
+import com.didiglobal.turbo.engine.result.CheckFlowVo;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -38,5 +40,26 @@ public class ModelValidator {
             throw new DefinitionException(ErrorEnum.MODEL_EMPTY);
         }
         flowModelValidator.validate(flowModel, commonParam);
+    }
+
+
+    public CheckFlowVo check(String flowModelStr) throws Exception {
+        CheckFlowVo checkVo = new CheckFlowVo();
+        try {
+            if (StringUtils.isBlank(flowModelStr)) {
+                throw new DefinitionException(ErrorEnum.MODEL_EMPTY);
+            }
+
+            FlowModel flowModel = FlowModelUtil.parseModelFromString(flowModelStr);
+            if (flowModel == null || CollectionUtils.isEmpty(flowModel.getFlowElementList())) {
+                throw new DefinitionException(ErrorEnum.MODEL_EMPTY);
+            }
+            checkVo.setFailList(flowModelValidator.check(flowModel));
+        } catch (TurboException te) {
+            checkVo.setErrCode(te.getErrNo());
+            checkVo.setErrMsg(te.getErrMsg());
+        }
+        return checkVo;
+
     }
 }

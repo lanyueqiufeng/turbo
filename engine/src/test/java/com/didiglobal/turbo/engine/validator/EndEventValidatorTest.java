@@ -29,7 +29,7 @@ public class EndEventValidatorTest extends BaseTest {
         map.put(endEvent.getKey(), endEvent);
         boolean access = false;
         try {
-            endEventValidator.checkIncoming(map, endEvent);
+            endEventValidator.checkIncoming(map, endEvent, null);
             access = true;
             Assert.assertTrue(access);
         } catch (DefinitionException e) {
@@ -51,7 +51,7 @@ public class EndEventValidatorTest extends BaseTest {
         map.put(endEventInvalid.getKey(), endEventInvalid);
         boolean access = false;
         try {
-            endEventValidator.checkIncoming(map, endEventInvalid);
+            endEventValidator.checkIncoming(map, endEventInvalid, null);
             access = true;
             Assert.assertFalse(access);
         } catch (DefinitionException e) {
@@ -69,7 +69,7 @@ public class EndEventValidatorTest extends BaseTest {
         FlowElement endEvent = EntityBuilder.buildEndEvent();
         Map<String, FlowElement> map = new HashMap<>();
         map.put(endEvent.getKey(), endEvent);
-        endEventValidator.checkOutgoing(map, endEvent);
+        endEventValidator.checkOutgoing(map, endEvent, null);
     }
 
     /**
@@ -84,6 +84,6 @@ public class EndEventValidatorTest extends BaseTest {
         endEventInvalid.setOutgoing(setOutgoing);
         Map<String, FlowElement> map = new HashMap<>();
         map.put(endEventInvalid.getKey(), endEventInvalid);
-        endEventValidator.checkOutgoing(map, endEventInvalid);
+        endEventValidator.checkOutgoing(map, endEventInvalid, null);
     }
 }
