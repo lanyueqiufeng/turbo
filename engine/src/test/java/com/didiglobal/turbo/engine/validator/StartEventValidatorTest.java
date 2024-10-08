@@ -27,7 +27,7 @@ public class StartEventValidatorTest extends BaseTest {
         FlowElement startEvent = EntityBuilder.buildStartEvent();
         Map<String, FlowElement> map = new HashMap<>();
         map.put(startEvent.getKey(), startEvent);
-        startEventValidator.checkIncoming(map, startEvent, null);
+        startEventValidator.checkIncoming(map, startEvent);
     }
     /**
      * Test startEvent's incoming, whlile incoming is too much.
@@ -41,7 +41,7 @@ public class StartEventValidatorTest extends BaseTest {
         startEventVaild.setIncoming(incomings);
         Map<String, FlowElement> map = new HashMap<>();
         map.put("startEvent", startEventVaild);
-        startEventValidator.checkIncoming(map, startEventVaild, null);
+        startEventValidator.checkIncoming(map, startEventVaild);
     }
 
     /**
@@ -55,7 +55,7 @@ public class StartEventValidatorTest extends BaseTest {
         map.put(startEvent.getKey(), startEvent);
         boolean access = false;
         try {
-            startEventValidator.checkOutgoing(map, startEvent, null);
+            startEventValidator.checkOutgoing(map, startEvent);
             access = true;
             Assert.assertTrue(access);
         } catch (DefinitionException e) {
@@ -76,7 +76,7 @@ public class StartEventValidatorTest extends BaseTest {
         map.put("startEvent", startEventVaild);
         boolean access = false;
         try {
-            startEventValidator.checkOutgoing(map, startEventVaild, null);
+            startEventValidator.checkOutgoing(map, startEventVaild);
             access = true;
             Assert.assertFalse(access);
         } catch (DefinitionException e) {

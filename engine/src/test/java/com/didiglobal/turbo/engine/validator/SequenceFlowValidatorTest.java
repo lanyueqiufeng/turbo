@@ -30,7 +30,7 @@ public class SequenceFlowValidatorTest extends BaseTest {
         flowElementMap.put(sequenceFlow.getKey(), sequenceFlow);
         boolean access = false;
         try {
-            sequenceFlowValidator.checkIncoming(flowElementMap, sequenceFlow, null);
+            sequenceFlowValidator.checkIncoming(flowElementMap, sequenceFlow);
             access = true;
             Assert.assertTrue(access);
         } catch (DefinitionException e) {
@@ -55,7 +55,7 @@ public class SequenceFlowValidatorTest extends BaseTest {
         flowElementMap.put(sequenceFlow.getKey(), sequenceFlow);
         boolean access = false;
         try {
-            sequenceFlowValidator.checkIncoming(flowElementMap, sequenceFlow, null);
+            sequenceFlowValidator.checkIncoming(flowElementMap, sequenceFlow);
             access = true;
             Assert.assertFalse(access);
         } catch (DefinitionException e) {
@@ -76,7 +76,7 @@ public class SequenceFlowValidatorTest extends BaseTest {
         flowElementMap.put(sequenceFlow.getKey(), sequenceFlow);
         boolean access = false;
         try {
-            sequenceFlowValidator.checkOutgoing(flowElementMap, sequenceFlow, null);
+            sequenceFlowValidator.checkOutgoing(flowElementMap, sequenceFlow);
             access = true;
             Assert.assertTrue(access);
         } catch (DefinitionException e) {
@@ -98,7 +98,7 @@ public class SequenceFlowValidatorTest extends BaseTest {
         flowElementMap.put(sequenceFlow.getKey(), sequenceFlow);
         boolean access = false;
         try {
-            sequenceFlowValidator.checkOutgoing(flowElementMap, sequenceFlow, null);
+            sequenceFlowValidator.checkOutgoing(flowElementMap, sequenceFlow);
             access = true;
             Assert.assertFalse(access);
         } catch (DefinitionException e) {

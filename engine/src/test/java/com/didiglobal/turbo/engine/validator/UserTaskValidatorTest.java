@@ -27,7 +27,7 @@ public class UserTaskValidatorTest extends BaseTest {
         map.put(userTask.getKey(), userTask);
         boolean access = false;
         try {
-            userTaskValidator.checkIncoming(map, userTask, null);
+            userTaskValidator.checkIncoming(map, userTask);
             access = true;
             Assert.assertTrue(access);
         } catch (DefinitionException e) {
@@ -47,7 +47,7 @@ public class UserTaskValidatorTest extends BaseTest {
         map.put(userTask.getKey(), userTask);
         boolean access = false;
         try {
-            userTaskValidator.checkIncoming(map, userTask, null);
+            userTaskValidator.checkIncoming(map, userTask);
             access = true;
             Assert.assertFalse(access);
         } catch (DefinitionException e) {
@@ -68,7 +68,7 @@ public class UserTaskValidatorTest extends BaseTest {
         map.put(userTask.getKey(), userTask);
         boolean access = false;
         try {
-            userTaskValidator.checkOutgoing(map, userTask, null);
+            userTaskValidator.checkOutgoing(map, userTask);
             access = true;
             Assert.assertTrue(access);
         } catch (DefinitionException e) {
@@ -89,7 +89,7 @@ public class UserTaskValidatorTest extends BaseTest {
         map.put(userTask.getKey(), userTask);
         boolean access = false;
         try {
-            userTaskValidator.checkOutgoing(map, userTask, null);
+            userTaskValidator.checkOutgoing(map, userTask);
             access = true;
             Assert.assertFalse(access);
         } catch (DefinitionException e) {

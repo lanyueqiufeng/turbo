@@ -1,33 +1,40 @@
 package com.didiglobal.turbo.engine.validator;
 
+import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_EXECUTE_TYPE.SYNC;
+import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_EXECUTE_TYPE.ASYNC;
+import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_INSTANCE_TYPE.MULTIPLE;
+import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_INSTANCE_TYPE.SINGLE;
+import static com.didiglobal.turbo.engine.common.Constants.ELEMENT_PROPERTIES.CALL_ACTIVITY_EXECUTE_TYPE;
+import static com.didiglobal.turbo.engine.common.Constants.ELEMENT_PROPERTIES.CALL_ACTIVITY_FLOW_MODULE_ID;
+import static com.didiglobal.turbo.engine.common.Constants.ELEMENT_PROPERTIES.*;
+
 import com.didiglobal.turbo.engine.common.Constants;
 import com.didiglobal.turbo.engine.common.ErrorEnum;
+import com.didiglobal.turbo.engine.common.FlowDefinitionStatus;
 import com.didiglobal.turbo.engine.common.FlowElementType;
 import com.didiglobal.turbo.engine.config.BusinessConfig;
 import com.didiglobal.turbo.engine.dao.FlowDefinitionDAO;
 import com.didiglobal.turbo.engine.entity.FlowDefinitionPO;
 import com.didiglobal.turbo.engine.exception.DefinitionException;
+import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.FlowModel;
 import com.didiglobal.turbo.engine.param.CommonParam;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.google.common.collect.Maps;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 import javax.annotation.Resource;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
-import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_EXECUTE_TYPE.ASYNC;
-import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_EXECUTE_TYPE.SYNC;
-import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_INSTANCE_TYPE.MULTIPLE;
-import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_INSTANCE_TYPE.SINGLE;
-import static com.didiglobal.turbo.engine.common.Constants.ELEMENT_PROPERTIES.CALL_ACTIVITY_EXECUTE_TYPE;
-import static com.didiglobal.turbo.engine.common.Constants.ELEMENT_PROPERTIES.CALL_ACTIVITY_FLOW_MODULE_ID;
-import static com.didiglobal.turbo.engine.common.Constants.ELEMENT_PROPERTIES.CALL_ACTIVITY_INSTANCE_TYPE;
 
 @Service
 public class CallActivityValidator extends ElementValidator {
@@ -40,28 +47,24 @@ public class CallActivityValidator extends ElementValidator {
 
     @Override
     protected void validate(Map<String, FlowElement> flowElementMap, FlowElement flowElement, CommonParam commonParam) throws DefinitionException {
-        checkIncoming(flowElementMap, flowElement, null);
-        checkOutgoing(flowElementMap, flowElement, null);
+        checkIncoming(flowElementMap, flowElement);
+        checkOutgoing(flowElementMap, flowElement);
         checkProperties(flowElementMap, flowElement);
         checkNestedLevel(flowElementMap, flowElement, commonParam);
     }
 
     @Override
-    protected void checkIncoming(Map<String, FlowElement> flowElementMap,
-                                 FlowElement flowElement,
-                                 Boolean isNotFormat) throws DefinitionException {
-        super.checkIncoming(flowElementMap, flowElement, isNotFormat);
+    protected void checkIncoming(Map<String, FlowElement> flowElementMap, FlowElement flowElement) throws DefinitionException {
+        super.checkIncoming(flowElementMap, flowElement);
     }
 
     @Override
-    protected void checkOutgoing(Map<String, FlowElement> flowElementMap,
-                                 FlowElement flowElement,
-                                 Boolean isNotFormat) throws DefinitionException {
-        super.checkOutgoing(flowElementMap, flowElement, isNotFormat);
+    protected void checkOutgoing(Map<String, FlowElement> flowElementMap, FlowElement flowElement) throws DefinitionException {
+        super.checkOutgoing(flowElementMap, flowElement);
         List<String> outgoingList = flowElement.getOutgoing();
 
         if (outgoingList.size() != 1) {
-            throwElementValidatorException(flowElement, ErrorEnum.ELEMENT_TOO_MUCH_OUTGOING, isNotFormat);
+            throwElementValidatorException(flowElement, ErrorEnum.ELEMENT_TOO_MUCH_OUTGOING);
         }
     }
 
@@ -71,19 +74,19 @@ public class CallActivityValidator extends ElementValidator {
         if (properties.containsKey(CALL_ACTIVITY_EXECUTE_TYPE)) {
             String value = properties.get(CALL_ACTIVITY_EXECUTE_TYPE).toString();
             if (!(SYNC.equals(value) || ASYNC.equals(value))) {
-                throwElementValidatorException(flowElement, ErrorEnum.MODEL_UNKNOWN_ELEMENT_VALUE, null);
+                throwElementValidatorException(flowElement, ErrorEnum.MODEL_UNKNOWN_ELEMENT_VALUE);
             }
         } else {
-            throwElementValidatorException(flowElement, ErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES, null);
+            throwElementValidatorException(flowElement, ErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES);
         }
         // 2.check InstanceType
         if (properties.containsKey(CALL_ACTIVITY_INSTANCE_TYPE)) {
             String value = properties.get(CALL_ACTIVITY_INSTANCE_TYPE).toString();
             if (!(SINGLE.equals(value) || MULTIPLE.equals(value))) {
-                throwElementValidatorException(flowElement, ErrorEnum.MODEL_UNKNOWN_ELEMENT_VALUE, null);
+                throwElementValidatorException(flowElement, ErrorEnum.MODEL_UNKNOWN_ELEMENT_VALUE);
             }
         } else {
-            throwElementValidatorException(flowElement, ErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES, null);
+            throwElementValidatorException(flowElement, ErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES);
         }
         // 3.check data transfer
         Set<String> callActivityParamTypeSet = new TreeSet<>();
@@ -94,10 +97,10 @@ public class CallActivityValidator extends ElementValidator {
         String callActivityInParamType = (String) properties.getOrDefault(Constants.ELEMENT_PROPERTIES.CALL_ACTIVITY_IN_PARAM_TYPE, Constants.CALL_ACTIVITY_PARAM_TYPE.FULL);
         String callActivityOutParamType = (String) properties.getOrDefault(Constants.ELEMENT_PROPERTIES.CALL_ACTIVITY_OUT_PARAM_TYPE, Constants.CALL_ACTIVITY_PARAM_TYPE.FULL);
         if (!callActivityParamTypeSet.contains(callActivityInParamType)) {
-            throwElementValidatorException(flowElement, ErrorEnum.MODEL_UNKNOWN_ELEMENT_VALUE, null);
+            throwElementValidatorException(flowElement, ErrorEnum.MODEL_UNKNOWN_ELEMENT_VALUE);
         }
         if (!callActivityParamTypeSet.contains(callActivityOutParamType)) {
-            throwElementValidatorException(flowElement, ErrorEnum.MODEL_UNKNOWN_ELEMENT_VALUE, null);
+            throwElementValidatorException(flowElement, ErrorEnum.MODEL_UNKNOWN_ELEMENT_VALUE);
         }
     }
 
@@ -109,7 +112,7 @@ public class CallActivityValidator extends ElementValidator {
         }
         int nestedLevel = getNestedLevel(flowElement, flowElement, Maps.newHashMap());
         if (callActivityNestedLevel < nestedLevel) {
-            throwElementValidatorException(flowElement, ErrorEnum.FLOW_NESTED_LEVEL_EXCEEDED, null);
+            throwElementValidatorException(flowElement, ErrorEnum.FLOW_NESTED_LEVEL_EXCEEDED);
         }
     }
 
@@ -126,7 +129,7 @@ public class CallActivityValidator extends ElementValidator {
         if (flowModuleId2NestLevelCache.containsKey(callActivityFlowModuleId)) {
             Integer result = flowModuleId2NestLevelCache.get(callActivityFlowModuleId);
             if (result == BusinessConfig.COMPUTING_FLOW_NESTED_LEVEL) {
-                throwElementValidatorException(rootFlowElement, ErrorEnum.FLOW_NESTED_DEAD_LOOP, null);
+                throwElementValidatorException(rootFlowElement, ErrorEnum.FLOW_NESTED_DEAD_LOOP);
             } else {
                 return result;
             }
@@ -136,7 +139,7 @@ public class CallActivityValidator extends ElementValidator {
 
         FlowDefinitionPO flowDefinitionPO = flowDefinitionDAO.selectByModuleId(callActivityFlowModuleId);
         if (flowDefinitionPO == null) {
-            throwElementValidatorException(rootFlowElement, ErrorEnum.MODEL_UNKNOWN_ELEMENT_VALUE, null);
+            throwElementValidatorException(rootFlowElement, ErrorEnum.MODEL_UNKNOWN_ELEMENT_VALUE);
         }
         FlowModel flowModel = FlowModelUtil.parseModelFromString(flowDefinitionPO.getFlowModel());
         List<FlowElement> flowElementList = flowModel == null ? new ArrayList<>() : flowModel.getFlowElementList();

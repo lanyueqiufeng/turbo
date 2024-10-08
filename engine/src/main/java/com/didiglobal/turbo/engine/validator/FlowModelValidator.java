@@ -116,14 +116,14 @@ public class FlowModelValidator {
 
             ElementValidator elementValidator = elementValidatorFactory.getElementValidator(flowElement);
             try {
-                elementValidator.check(flowElementMap, flowElement);
+                elementValidator.check(flowElementMap,flowElement);
             } catch (DefinitionException e) {
                 CheckFlowItemVo checkItemVo = new CheckFlowItemVo();
                 checkItemVo.setElementKey(flowElement.getKey());
                 checkItemVo.setElementType(FlowModelUtil.getElementType(flowElement));
                 checkItemVo.setElementName(FlowModelUtil.getElementName(flowElement));
-                checkItemVo.setExceptionMsg(e.getErrMsg());
                 checkItemVo.setErrNo(e.getErrNo());
+                checkItemVo.setExceptionMsg(ErrorEnum.getErrorEnum(e.getErrNo()).getErrMsg());
                 checkItemVos.add(checkItemVo);
             }
             if (FlowElementType.START_EVENT == flowElement.getType()) {

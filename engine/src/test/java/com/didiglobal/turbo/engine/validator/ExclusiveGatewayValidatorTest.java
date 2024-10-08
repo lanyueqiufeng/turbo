@@ -33,7 +33,7 @@ public class ExclusiveGatewayValidatorTest extends BaseTest {
         map.put(outgoningSequence1.getKey(), outgoningSequence1);
         boolean access = false;
         try {
-            exclusiveGatewayValidator.checkIncoming(map, exclusiveGateway, null);
+            exclusiveGatewayValidator.checkIncoming(map, exclusiveGateway);
             access = true;
             Assert.assertTrue(access);
         } catch (DefinitionException e) {
@@ -58,7 +58,7 @@ public class ExclusiveGatewayValidatorTest extends BaseTest {
         map.put(outgoningSequence1.getKey(), outgoningSequence1);
         boolean access = false;
         try {
-            exclusiveGatewayValidator.checkIncoming(map, exclusiveGateway, null);
+            exclusiveGatewayValidator.checkIncoming(map, exclusiveGateway);
             access = true;
             Assert.assertFalse(access);
         } catch (DefinitionException e) {
@@ -82,7 +82,7 @@ public class ExclusiveGatewayValidatorTest extends BaseTest {
         map.put(outgoningSequence1.getKey(), outgoningSequence1);
         boolean access = false;
         try {
-            exclusiveGatewayValidator.checkOutgoing(map, exclusiveGateway, null);
+            exclusiveGatewayValidator.checkOutgoing(map, exclusiveGateway);
             access = true;
             Assert.assertTrue(access);
         } catch (DefinitionException e) {
@@ -110,7 +110,7 @@ public class ExclusiveGatewayValidatorTest extends BaseTest {
         map.put(outgoningSequence1.getKey(), outgoningSequence1);
         boolean access = false;
         try {
-            exclusiveGatewayValidator.checkOutgoing(map, exclusiveGateway, null);
+            exclusiveGatewayValidator.checkOutgoing(map, exclusiveGateway);
             access = true;
             Assert.assertFalse(access);
         } catch (DefinitionException e) {
@@ -142,7 +142,7 @@ public class ExclusiveGatewayValidatorTest extends BaseTest {
         map.put(outgoningSequence1.getKey(), outgoningSequence1);
         boolean access = false;
         try {
-            exclusiveGatewayValidator.checkOutgoing(map, exclusiveGateway, null);
+            exclusiveGatewayValidator.checkOutgoing(map, exclusiveGateway);
             access = true;
             Assert.assertFalse(access);
         } catch (DefinitionException e) {

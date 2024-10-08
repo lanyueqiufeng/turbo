@@ -21,11 +21,11 @@ public class EndEventValidator extends ElementValidator {
      * @param flowElementMap, flowElement
      */
     @Override
-    protected void checkOutgoing(Map<String, FlowElement> flowElementMap, FlowElement flowElement, Boolean isNotFormat) {
+    protected void checkOutgoing(Map<String, FlowElement> flowElementMap, FlowElement flowElement) {
         List<String> outgoing = flowElement.getOutgoing();
 
         if (CollectionUtils.isNotEmpty(outgoing)) {
-            recordElementValidatorException(flowElement, ErrorEnum.ELEMENT_TOO_MUCH_OUTGOING, isNotFormat);
+            recordElementValidatorException(flowElement, ErrorEnum.ELEMENT_TOO_MUCH_OUTGOING);
         }
     }
 }
