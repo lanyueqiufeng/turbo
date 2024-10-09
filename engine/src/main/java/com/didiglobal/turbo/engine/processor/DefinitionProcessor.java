@@ -15,7 +15,11 @@ import com.didiglobal.turbo.engine.param.CreateFlowParam;
 import com.didiglobal.turbo.engine.param.DeployFlowParam;
 import com.didiglobal.turbo.engine.param.GetFlowModuleParam;
 import com.didiglobal.turbo.engine.param.UpdateFlowParam;
-import com.didiglobal.turbo.engine.result.*;
+import com.didiglobal.turbo.engine.result.CommonResult;
+import com.didiglobal.turbo.engine.result.CreateFlowResult;
+import com.didiglobal.turbo.engine.result.DeployFlowResult;
+import com.didiglobal.turbo.engine.result.FlowModuleResult;
+import com.didiglobal.turbo.engine.result.UpdateFlowResult;
 import com.didiglobal.turbo.engine.util.IdGenerator;
 import com.didiglobal.turbo.engine.util.StrongUuidGenerator;
 import com.didiglobal.turbo.engine.validator.ModelValidator;
@@ -95,7 +99,7 @@ public class DefinitionProcessor {
         return updateFlowResult;
     }
 
-    public DeployFlowResult deploy(DeployFlowParam deployFlowParam) {
+    public DeployFlowResult deploy(DeployFlowParam deployFlowParam, Boolean ignoreCheck) {
         DeployFlowResult deployFlowResult = new DeployFlowResult();
         try {
             ParamValidator.validate(deployFlowParam);
@@ -113,8 +117,10 @@ public class DefinitionProcessor {
             }
 
             String flowModel = flowDefinitionPO.getFlowModel();
-            modelValidator.validate(flowModel, deployFlowParam);
-
+            if (null == ignoreCheck) {
+                ignoreCheck = Boolean.FALSE;
+            }
+            modelValidator.validate(flowModel, deployFlowParam, ignoreCheck);
             FlowDeploymentPO flowDeploymentPO = new FlowDeploymentPO();
             BeanUtils.copyProperties(flowDefinitionPO, flowDeploymentPO);
             String flowDeployId = idGenerator.getNextId();

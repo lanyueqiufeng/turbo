@@ -55,7 +55,7 @@ public class DefinitionProcessorTest extends BaseTest {
         UpdateFlowResult updateFlowResult = definitionProcessor.update(updateFlowParam);
         Assert.assertTrue(updateFlowResult.getErrCode() == ErrorEnum.SUCCESS.getErrNo());
         deployFlowParam.setFlowModuleId(createFlowResult.getFlowModuleId());
-        DeployFlowResult deployFlowResult = definitionProcessor.deploy(deployFlowParam);
+        DeployFlowResult deployFlowResult = definitionProcessor.deploy(deployFlowParam, Boolean.FALSE);
         LOGGER.info("deployFlowTest.||deployFlowResult={}", deployFlowResult);
         Assert.assertTrue(deployFlowResult.getErrCode() == ErrorEnum.SUCCESS.getErrNo());
     }
@@ -77,7 +77,7 @@ public class DefinitionProcessorTest extends BaseTest {
         Assert.assertTrue(flowModuleResultByFlowModuleId.getFlowModuleId().equals(createFlowResult.getFlowModuleId()));
 
         deployFlowParam.setFlowModuleId(createFlowResult.getFlowModuleId());
-        DeployFlowResult deployFlowResult = definitionProcessor.deploy(deployFlowParam);
+        DeployFlowResult deployFlowResult = definitionProcessor.deploy(deployFlowParam, Boolean.FALSE);
         flowModuleParam.setFlowDeployId(deployFlowResult.getFlowDeployId());
         flowModuleParam.setFlowModuleId(null);
         FlowModuleResult flowModuleResultByDeployId = definitionProcessor.getFlowModule(flowModuleParam);

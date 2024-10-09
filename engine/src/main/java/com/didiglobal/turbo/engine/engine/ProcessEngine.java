@@ -4,9 +4,31 @@ package com.didiglobal.turbo.engine.engine;
 import com.didiglobal.turbo.engine.bo.NodeInstance;
 import com.didiglobal.turbo.engine.entity.FlowDefinitionPO;
 import com.didiglobal.turbo.engine.entity.FlowDeploymentPO;
-import com.didiglobal.turbo.engine.model.*;
-import com.didiglobal.turbo.engine.param.*;
-import com.didiglobal.turbo.engine.result.*;
+import com.didiglobal.turbo.engine.model.EndEvent;
+import com.didiglobal.turbo.engine.model.FlowModel;
+import com.didiglobal.turbo.engine.model.InstanceData;
+import com.didiglobal.turbo.engine.model.StartEvent;
+import com.didiglobal.turbo.engine.model.UserTask;
+import com.didiglobal.turbo.engine.param.CommitTaskParam;
+import com.didiglobal.turbo.engine.param.CreateFlowParam;
+import com.didiglobal.turbo.engine.param.DeployFlowParam;
+import com.didiglobal.turbo.engine.param.GetFlowModuleParam;
+import com.didiglobal.turbo.engine.param.RollbackTaskParam;
+import com.didiglobal.turbo.engine.param.StartProcessParam;
+import com.didiglobal.turbo.engine.param.UpdateFlowParam;
+import com.didiglobal.turbo.engine.result.CommitTaskResult;
+import com.didiglobal.turbo.engine.result.CreateFlowResult;
+import com.didiglobal.turbo.engine.result.DeployFlowResult;
+import com.didiglobal.turbo.engine.result.ElementInstanceListResult;
+import com.didiglobal.turbo.engine.result.FlowInstanceResult;
+import com.didiglobal.turbo.engine.result.FlowModuleResult;
+import com.didiglobal.turbo.engine.result.InstanceDataListResult;
+import com.didiglobal.turbo.engine.result.NodeInstanceListResult;
+import com.didiglobal.turbo.engine.result.NodeInstanceResult;
+import com.didiglobal.turbo.engine.result.RollbackTaskResult;
+import com.didiglobal.turbo.engine.result.StartProcessResult;
+import com.didiglobal.turbo.engine.result.TerminateResult;
+import com.didiglobal.turbo.engine.result.UpdateFlowResult;
 
 /**
  * The entrance of Turbo
@@ -46,6 +68,8 @@ public interface ProcessEngine {
      * @return {@link DeployFlowResult} mainly contains flowDeployId to indicate an unique record of the deployment.
      */
     DeployFlowResult deployFlow(DeployFlowParam deployFlowParam);
+
+    DeployFlowResult deployDesignFlow(DeployFlowParam deployFlowParam);
 
     /**
      * Get flow info includes flowModel content, status and descriptive info.

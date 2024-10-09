@@ -49,7 +49,6 @@ public class ModelValidator {
             if (StringUtils.isBlank(flowModelStr)) {
                 throw new DefinitionException(ErrorEnum.MODEL_EMPTY);
             }
-
             FlowModel flowModel = FlowModelUtil.parseModelFromString(flowModelStr);
             if (flowModel == null || CollectionUtils.isEmpty(flowModel.getFlowElementList())) {
                 throw new DefinitionException(ErrorEnum.MODEL_EMPTY);
@@ -60,6 +59,22 @@ public class ModelValidator {
             checkVo.setErrMsg(te.getErrMsg());
         }
         return checkVo;
+    }
 
+    public void validate(String flowModelStr,
+                         CommonParam commonParam,
+                         Boolean ignoreCheck) throws DefinitionException, ProcessException {
+        if (StringUtils.isBlank(flowModelStr)) {
+            LOGGER.warn("message={}", ErrorEnum.MODEL_EMPTY.getErrMsg());
+            throw new DefinitionException(ErrorEnum.MODEL_EMPTY);
+        }
+        FlowModel flowModel = FlowModelUtil.parseModelFromString(flowModelStr);
+        if (flowModel == null || CollectionUtils.isEmpty(flowModel.getFlowElementList())) {
+            LOGGER.warn("message={}||flowModelStr={}", ErrorEnum.MODEL_EMPTY.getErrMsg(), flowModelStr);
+            throw new DefinitionException(ErrorEnum.MODEL_EMPTY);
+        }
+        if (!ignoreCheck) {
+            flowModelValidator.validate(flowModel, commonParam);
+        }
     }
 }
