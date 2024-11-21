@@ -4,6 +4,7 @@ import com.didiglobal.turbo.engine.common.Constants;
 import com.didiglobal.turbo.engine.common.ErrorEnum;
 import com.didiglobal.turbo.engine.common.FlowElementType;
 import com.didiglobal.turbo.engine.exception.ProcessException;
+import com.didiglobal.turbo.engine.executor.callactivity.AsyncSingleCallActivityExecutor;
 import com.didiglobal.turbo.engine.executor.callactivity.SyncSingleCallActivityExecutor;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
@@ -45,6 +46,9 @@ public class ExecutorFactory {
 
     @Resource
     private SyncSingleCallActivityExecutor syncSingleCallActivityExecutor;
+
+    @Resource
+    private AsyncSingleCallActivityExecutor asyncSingleCallActivityExecutor;
 
     public ElementExecutor getElementExecutor(FlowElement flowElement) throws ProcessException {
         ElementExecutor elementExecutor = getElementExecutorInternal(flowElement);
@@ -101,6 +105,9 @@ public class ExecutorFactory {
         if (callActivityExecuteType.equals(Constants.CALL_ACTIVITY_EXECUTE_TYPE.SYNC)
             && callActivityInstanceType.equals(Constants.CALL_ACTIVITY_INSTANCE_TYPE.SINGLE)) {
             return syncSingleCallActivityExecutor;
+        } else if (callActivityExecuteType.equals(Constants.CALL_ACTIVITY_EXECUTE_TYPE.ASYNC)
+                && callActivityInstanceType.equals(Constants.CALL_ACTIVITY_INSTANCE_TYPE.SINGLE)) {
+            return asyncSingleCallActivityExecutor;
         } else {
             return null;
         }

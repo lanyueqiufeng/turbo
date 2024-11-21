@@ -2,27 +2,13 @@ package com.didiglobal.turbo.engine.processor;
 
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
-import com.didiglobal.turbo.engine.bo.ElementInstance;
-import com.didiglobal.turbo.engine.bo.FlowInfo;
-import com.didiglobal.turbo.engine.bo.FlowInstanceBO;
-import com.didiglobal.turbo.engine.bo.NodeInstance;
-import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
-import com.didiglobal.turbo.engine.common.ErrorEnum;
-import com.didiglobal.turbo.engine.common.FlowElementType;
-import com.didiglobal.turbo.engine.common.FlowInstanceMappingType;
-import com.didiglobal.turbo.engine.common.FlowInstanceStatus;
-import com.didiglobal.turbo.engine.common.NodeInstanceStatus;
-import com.didiglobal.turbo.engine.common.ProcessStatus;
-import com.didiglobal.turbo.engine.common.RuntimeContext;
+import com.didiglobal.turbo.engine.bo.*;
+import com.didiglobal.turbo.engine.common.*;
 import com.didiglobal.turbo.engine.dao.FlowDeploymentDAO;
 import com.didiglobal.turbo.engine.dao.FlowInstanceMappingDAO;
 import com.didiglobal.turbo.engine.dao.NodeInstanceDAO;
 import com.didiglobal.turbo.engine.dao.ProcessInstanceDAO;
-import com.didiglobal.turbo.engine.entity.FlowDeploymentPO;
-import com.didiglobal.turbo.engine.entity.FlowInstanceMappingPO;
-import com.didiglobal.turbo.engine.entity.FlowInstancePO;
-import com.didiglobal.turbo.engine.entity.InstanceDataPO;
-import com.didiglobal.turbo.engine.entity.NodeInstancePO;
+import com.didiglobal.turbo.engine.entity.*;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.exception.ReentrantException;
 import com.didiglobal.turbo.engine.exception.TurboException;
@@ -32,16 +18,7 @@ import com.didiglobal.turbo.engine.model.InstanceData;
 import com.didiglobal.turbo.engine.param.CommitTaskParam;
 import com.didiglobal.turbo.engine.param.RollbackTaskParam;
 import com.didiglobal.turbo.engine.param.StartProcessParam;
-import com.didiglobal.turbo.engine.result.CommitTaskResult;
-import com.didiglobal.turbo.engine.result.ElementInstanceListResult;
-import com.didiglobal.turbo.engine.result.FlowInstanceResult;
-import com.didiglobal.turbo.engine.result.InstanceDataListResult;
-import com.didiglobal.turbo.engine.result.NodeInstanceListResult;
-import com.didiglobal.turbo.engine.result.NodeInstanceResult;
-import com.didiglobal.turbo.engine.result.RollbackTaskResult;
-import com.didiglobal.turbo.engine.result.RuntimeResult;
-import com.didiglobal.turbo.engine.result.StartProcessResult;
-import com.didiglobal.turbo.engine.result.TerminateResult;
+import com.didiglobal.turbo.engine.result.*;
 import com.didiglobal.turbo.engine.service.FlowInstanceService;
 import com.didiglobal.turbo.engine.service.InstanceDataService;
 import com.didiglobal.turbo.engine.service.NodeInstanceService;
@@ -59,12 +36,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 
 @Component
 public class RuntimeProcessor {
@@ -118,6 +90,32 @@ public class RuntimeProcessor {
             if (!ErrorEnum.isSuccess(e.getErrNo())) {
                 LOGGER.warn("startProcess ProcessException.||startProcessParam={}||runtimeContext={}, ",
                     startProcessParam, runtimeContext, e);
+            }
+            return buildStartProcessResult(runtimeContext, e);
+        }
+    }
+
+    public StartProcessResult startProcessAsync(StartProcessParam startProcessParam) {
+        RuntimeContext runtimeContext = null;
+        try {
+            //1.param validate
+            ParamValidator.validate(startProcessParam);
+
+            //2.getFlowInfo
+            FlowInfo flowInfo = getFlowInfo(startProcessParam);
+
+            //3.init context for runtime
+            runtimeContext = buildStartProcessContext(flowInfo, startProcessParam.getVariables(), startProcessParam.getRuntimeContext());
+
+            //4.process
+            flowExecutor.executeAsync(runtimeContext);
+
+            //5.build result
+            return buildStartProcessResult(runtimeContext);
+        } catch (TurboException e) {
+            if (!ErrorEnum.isSuccess(e.getErrNo())) {
+                LOGGER.warn("startProcess ProcessException.||startProcessParam={}||runtimeContext={}, ",
+                        startProcessParam, runtimeContext, e);
             }
             return buildStartProcessResult(runtimeContext, e);
         }

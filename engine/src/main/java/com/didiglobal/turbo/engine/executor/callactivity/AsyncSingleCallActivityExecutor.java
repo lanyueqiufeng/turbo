@@ -11,11 +11,7 @@ import com.didiglobal.turbo.engine.exception.SuspendException;
 import com.didiglobal.turbo.engine.executor.ServiceTaskExecutor;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
-import com.didiglobal.turbo.engine.param.CommitTaskParam;
-import com.didiglobal.turbo.engine.param.RollbackTaskParam;
 import com.didiglobal.turbo.engine.param.StartProcessParam;
-import com.didiglobal.turbo.engine.result.CommitTaskResult;
-import com.didiglobal.turbo.engine.result.RollbackTaskResult;
 import com.didiglobal.turbo.engine.result.RuntimeResult;
 import com.didiglobal.turbo.engine.result.StartProcessResult;
 import com.didiglobal.turbo.engine.spi.SubFlowStartService;
@@ -29,7 +25,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -42,7 +37,7 @@ import java.util.Map;
  * @date 2024/7/23 10:42
  */
 @Service
-public class AsyncSingleCallActivityExecutor extends AbstractCallActivityExecutor {
+public class AsyncSingleCallActivityExecutor extends SyncSingleCallActivityExecutor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AsyncSingleCallActivityExecutor.class);
 
@@ -52,34 +47,6 @@ public class AsyncSingleCallActivityExecutor extends AbstractCallActivityExecuto
     @Autowired(required = false)
     private SubFlowStartService subFlowStartService;
 
-    @Override
-    protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {
-        NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
-        if (currentNodeInstance.getStatus() == NodeInstanceStatus.COMPLETED) {
-            LOGGER.warn("doExecute reentrant: currentNodeInstance is completed.||runtimeContext={}", runtimeContext);
-            return;
-        }
-
-        if (currentNodeInstance.getStatus() != NodeInstanceStatus.ACTIVE) {
-            currentNodeInstance.setStatus(NodeInstanceStatus.ACTIVE);
-        }
-        runtimeContext.getNodeInstanceList().add(currentNodeInstance);
-
-        FlowElement flowElement = runtimeContext.getCurrentNodeModel();
-        String nodeName = FlowModelUtil.getElementName(flowElement);
-        LOGGER.info("doExecute: syncSingleCallActivity to commit.||flowInstanceId={}||nodeInstanceId={}||nodeKey={}||nodeName={}",
-                runtimeContext.getFlowInstanceId(), currentNodeInstance.getNodeInstanceId(), flowElement.getKey(), nodeName);
-        throw new SuspendException(ErrorEnum.COMMIT_SUSPEND, MessageFormat.format(Constants.NODE_INSTANCE_FORMAT,
-                flowElement.getKey(), nodeName, currentNodeInstance.getNodeInstanceId()));
-    }
-
-    @Override
-    protected void preCommit(RuntimeContext runtimeContext) throws ProcessException {
-        NodeInstanceBO suspendNodeInstance = runtimeContext.getSuspendNodeInstance();
-        NodeInstanceBO currentNodeInstance = new NodeInstanceBO();
-        BeanUtils.copyProperties(suspendNodeInstance, currentNodeInstance);
-        runtimeContext.setCurrentNodeInstance(currentNodeInstance);
-    }
 
     @Override
     protected void doCommit(RuntimeContext runtimeContext) throws ProcessException {
@@ -88,49 +55,13 @@ public class AsyncSingleCallActivityExecutor extends AbstractCallActivityExecuto
             startProcessCallActivity(runtimeContext);
         } else {
             // 异步业务流  一般不认为可以再次提交
-            commitCallActivity(runtimeContext);
+            throw new ProcessException(ErrorEnum.COMMIT_FAILED, "异步子流程不可重复提交");
         }
         String instanceDataId = serviceTaskExecutor.saveInstanceDataPO(runtimeContext);
         runtimeContext.setInstanceDataId(instanceDataId);
     }
 
     @Override
-    protected void postCommit(RuntimeContext runtimeContext) throws ProcessException {
-        NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
-        runtimeContext.getNodeInstanceList().add(currentNodeInstance);
-    }
-
-    @Override
-    protected void doRollback(RuntimeContext runtimeContext) throws ProcessException {
-        NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
-        FlowInstanceMappingPO flowInstanceMappingPO = flowInstanceMappingDAO.selectFlowInstanceMappingPO(runtimeContext.getFlowInstanceId(), currentNodeInstance.getNodeInstanceId());
-        String subFlowInstanceId = flowInstanceMappingPO.getSubFlowInstanceId();
-
-        String taskInstanceId = null;
-        if (CollectionUtils.isEmpty(runtimeContext.getSuspendNodeInstanceStack())) {
-            NodeInstancePO nodeInstancePO = nodeInstanceService.selectRecentEndNode(subFlowInstanceId);
-            taskInstanceId = nodeInstancePO.getNodeInstanceId();
-        } else {
-            taskInstanceId = runtimeContext.getSuspendNodeInstanceStack().pop();
-        }
-
-        RollbackTaskParam rollbackTaskParam = new RollbackTaskParam();
-        rollbackTaskParam.setRuntimeContext(runtimeContext);
-        rollbackTaskParam.setFlowInstanceId(subFlowInstanceId);
-        rollbackTaskParam.setTaskInstanceId(taskInstanceId);
-        RollbackTaskResult rollbackTaskResult = runtimeProcessor.rollback(rollbackTaskParam);
-        LOGGER.info("callActivity rollback.||rollbackTaskParam={}||rollbackTaskResult={}", rollbackTaskParam, rollbackTaskResult);
-        // 4.update flowInstance mapping
-        updateFlowInstanceMapping(runtimeContext);
-        handleCallActivityResult(runtimeContext, rollbackTaskResult);
-    }
-
-    @Override
-    protected void postRollback(RuntimeContext runtimeContext) throws ProcessException {
-        NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
-        runtimeContext.getNodeInstanceList().add(currentNodeInstance);
-    }
-
     protected void startProcessCallActivity(RuntimeContext runtimeContext) throws ProcessException {
         NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
         // 1.check reentrant execute
@@ -261,54 +192,6 @@ public class AsyncSingleCallActivityExecutor extends AbstractCallActivityExecuto
         return runtimeResult;
     }
 
-    protected void commitCallActivity(RuntimeContext runtimeContext) throws ProcessException {
-        NodeInstanceBO suspendNodeInstance = runtimeContext.getSuspendNodeInstance();
-        FlowInstanceMappingPO flowInstanceMappingPO = flowInstanceMappingDAO.selectFlowInstanceMappingPO(runtimeContext.getFlowInstanceId(), suspendNodeInstance.getNodeInstanceId());
-        String subFlowInstanceId = flowInstanceMappingPO.getSubFlowInstanceId();
-
-        CommitTaskParam commitTaskParam = new CommitTaskParam();
-        commitTaskParam.setRuntimeContext(runtimeContext);
-        commitTaskParam.setFlowInstanceId(subFlowInstanceId);
-        commitTaskParam.setTaskInstanceId(runtimeContext.getSuspendNodeInstanceStack().pop());
-        commitTaskParam.setVariables(InstanceDataUtil.getInstanceDataList(runtimeContext.getInstanceDataMap()));
-        // transparent transmission callActivity param
-        commitTaskParam.setCallActivityFlowModuleId(runtimeContext.getCallActivityFlowModuleId());
-        runtimeContext.setCallActivityFlowModuleId(null); // avoid misuse
-        commitTaskParam.setCallActivityFlowDeployId(runtimeContext.getCallActivityFlowDeployId());
-        runtimeContext.setCallActivityFlowDeployId(null);
-        CommitTaskResult commitTaskResult = runtimeProcessor.commit(commitTaskParam);
-        LOGGER.info("提交子流程 ||commitTaskParam={}||commitTaskResult={}", commitTaskParam, commitTaskResult);
-        handleCallActivityResult(runtimeContext, commitTaskResult);
-    }
-
-    private void updateFlowInstanceMapping(RuntimeContext runtimeContext) {
-        NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
-        if (currentNodeInstance.getStatus() != NodeInstanceStatus.COMPLETED) {
-            return;
-        }
-        currentNodeInstance.setStatus(NodeInstanceStatus.DISABLED);
-        runtimeContext.getNodeInstanceList().add(currentNodeInstance);
-
-        NodeInstanceBO newNodeInstanceBO = new NodeInstanceBO();
-        BeanUtils.copyProperties(currentNodeInstance, newNodeInstanceBO);
-        newNodeInstanceBO.setId(null);
-        String newNodeInstanceId = genId();
-        newNodeInstanceBO.setNodeInstanceId(newNodeInstanceId);
-        newNodeInstanceBO.setStatus(NodeInstanceStatus.ACTIVE);
-        runtimeContext.setCurrentNodeInstance(newNodeInstanceBO);
-
-        FlowInstanceMappingPO oldFlowInstanceMappingPO = flowInstanceMappingDAO.selectFlowInstanceMappingPO(runtimeContext.getFlowInstanceId(), currentNodeInstance.getNodeInstanceId());
-        flowInstanceMappingDAO.updateType(oldFlowInstanceMappingPO.getFlowInstanceId(), oldFlowInstanceMappingPO.getNodeInstanceId(), FlowInstanceMappingType.TERMINATED);
-
-        FlowInstanceMappingPO newFlowInstanceMappingPO = new FlowInstanceMappingPO();
-        BeanUtils.copyProperties(oldFlowInstanceMappingPO, newFlowInstanceMappingPO);
-        newFlowInstanceMappingPO.setId(null);
-        newFlowInstanceMappingPO.setNodeInstanceId(newNodeInstanceId);
-        newFlowInstanceMappingPO.setCreateTime(new Date());
-        newFlowInstanceMappingPO.setModifyTime(new Date());
-        flowInstanceMappingDAO.insert(newFlowInstanceMappingPO);
-    }
-
     /**
      * common handle RuntimeResult from startProcessCallActivity, commitCallActivity, rollbackCallActivity.
      *
@@ -317,34 +200,13 @@ public class AsyncSingleCallActivityExecutor extends AbstractCallActivityExecuto
      * @throws ProcessException
      */
     protected void handleCallActivityResult(RuntimeContext runtimeContext, RuntimeResult runtimeResult) throws ProcessException {
-        ErrorEnum errorEnum = ErrorEnum.getErrorEnum(runtimeResult.getErrCode());
-        switch (errorEnum) {
-            case SUCCESS:
-                handleSuccessSubFlowResult(runtimeContext, runtimeResult);
-                break;
-            case COMMIT_SUSPEND:
-                // handleCommitSuspendFlowResult(runtimeContext, runtimeResult);
-            case ROLLBACK_SUSPEND:
-                runtimeContext.getCurrentNodeInstance().setStatus(NodeInstanceStatus.ACTIVE);
-                runtimeContext.setCallActivityRuntimeResultList(Arrays.asList(runtimeResult));
-                throw new SuspendException(errorEnum);
-            default:
-                throw new ProcessException(errorEnum);
-        }
+        handleSyncSubFlowResult(runtimeContext, runtimeResult);
     }
 
-    private void handleSuccessSubFlowResult(RuntimeContext runtimeContext, RuntimeResult runtimeResult) throws ProcessException {
+    private void handleSyncSubFlowResult(RuntimeContext runtimeContext, RuntimeResult runtimeResult) throws ProcessException {
         NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
-        if (runtimeResult.getStatus() == FlowInstanceStatus.TERMINATED) {
-            // The subFlow rollback from the StartNode to the MainFlow
-            currentNodeInstance.setStatus(NodeInstanceStatus.DISABLED);
-            flowInstanceMappingDAO.updateType(runtimeContext.getFlowInstanceId(), currentNodeInstance.getNodeInstanceId(), FlowInstanceMappingType.TERMINATED);
-        } else if (runtimeResult.getStatus() == FlowInstanceStatus.END) {
-            // The subFlow is completed from the EndNode to the MainFlow
-            currentNodeInstance.setStatus(NodeInstanceStatus.COMPLETED);
-            // transfer data from subFlow to MainFlow
-            saveAsyncCallActivityEndInstanceData(runtimeContext, runtimeResult);
-        }
+        currentNodeInstance.setStatus(NodeInstanceStatus.COMPLETED);
+        saveAsyncCallActivityEndInstanceData(runtimeContext, runtimeResult);
     }
 
     private void saveAsyncCallActivityEndInstanceData(RuntimeContext runtimeContext, RuntimeResult runtimeResult) throws ProcessException {
@@ -354,20 +216,17 @@ public class AsyncSingleCallActivityExecutor extends AbstractCallActivityExecuto
         // 1.merge to current data
         Map<String, InstanceData> mainInstanceDataMap = InstanceDataUtil.getInstanceDataMap(instanceDataDAO.select(runtimeContext.getFlowInstanceId(), runtimeContext.getInstanceDataId()).getInstanceData());
         mainInstanceDataMap.putAll(InstanceDataUtil.getInstanceDataMap(instanceDataFromSubFlow));
+        // 注入原始父流程参数
         runtimeContext.setInstanceDataMap(mainInstanceDataMap);
-        // 主流程流程参数
+        // 主流程流程flowMap
         JSONObject flowMap = (JSONObject) mainInstanceDataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
         // update: 将子流程end环节出参  绑定给对应子流程环节的出参
         Map<String, Object> subFlowInstanceData = InstanceDataUtil.changeInstanceDataToMap(runtimeResult.getVariables());
-        if (subFlowInstanceData.containsKey(ChatFlowConstant.InstanceKey.END_OUTPUT)) {
-            // 取出子流程出参
-            String nodeKey = runtimeContext.getCurrentNodeInstance().getNodeKey();
-            JSONObject endNodeData = (JSONObject) subFlowInstanceData.get(ChatFlowConstant.InstanceKey.END_OUTPUT);
-            // 放入父流程对应环节上
-            flowMap.put(nodeKey, endNodeData);
-            // 传递全局参数
-            flowMap.put(ChatFlowConstant.InstanceKey.AGENT_MAP, endNodeData.get(ChatFlowConstant.InstanceKey.AGENT_MAP));
-        }
+        // 注入异步子流程的流程实例id
+        String nodeKey = runtimeContext.getCurrentNodeInstance().getNodeKey();
+        JSONObject syncSubData = new JSONObject().fluentPut("subFlowInstanceId", runtimeResult.getFlowInstanceId());
+        // 放入父流程对应环节上
+        flowMap.put(nodeKey, syncSubData);
         // 2.save data
         String instanceDataId = genId();
         InstanceDataPO instanceDataPO = buildCallActivityEndInstanceData(instanceDataId, runtimeContext);
@@ -375,20 +234,5 @@ public class AsyncSingleCallActivityExecutor extends AbstractCallActivityExecuto
         runtimeContext.setInstanceDataId(instanceDataId);
         // 3.set currentNode completed
         currentNodeInstance.setInstanceDataId(runtimeContext.getInstanceDataId());
-    }
-
-    private void handleCommitSuspendFlowResult(RuntimeContext runtimeContext, RuntimeResult runtimeResult) throws ProcessException {
-        NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
-        LOGGER.warn(String.valueOf(runtimeResult.getStatus()));
-        if (runtimeResult.getStatus() == FlowInstanceStatus.TERMINATED) {
-            // The subFlow rollback from the StartNode to the MainFlow
-            currentNodeInstance.setStatus(NodeInstanceStatus.DISABLED);
-            flowInstanceMappingDAO.updateType(runtimeContext.getFlowInstanceId(), currentNodeInstance.getNodeInstanceId(), FlowInstanceMappingType.TERMINATED);
-        } else if (runtimeResult.getStatus() == FlowInstanceStatus.RUNNING) {
-            Map<String, InstanceData> instanceDataFromSubFlow = InstanceDataUtil.getInstanceDataMap(runtimeResult.getVariables());
-            // merge to current data
-            Map<String, InstanceData> currentInstanceDataMap = runtimeContext.getInstanceDataMap();
-            currentInstanceDataMap.putAll(instanceDataFromSubFlow);
-        }
     }
 }

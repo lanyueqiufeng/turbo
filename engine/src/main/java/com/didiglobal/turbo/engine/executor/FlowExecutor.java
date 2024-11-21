@@ -11,6 +11,7 @@ import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.exception.ReentrantException;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
+import com.didiglobal.turbo.engine.spi.SubFlowStartService;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
 import com.google.common.collect.Lists;
@@ -21,6 +22,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -36,6 +40,13 @@ public class FlowExecutor extends RuntimeExecutor {
     @Resource
     private ProcessInstanceDAO processInstanceDAO;
 
+    @Resource(name = "agentThreadPoolTaskExecutor")
+    @Lazy
+    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+
+    @Autowired(required = false)
+    private SubFlowStartService subFlowStartService;
+
     ////////////////////////////////////////execute////////////////////////////////////////
 
     @Override
@@ -43,6 +54,50 @@ public class FlowExecutor extends RuntimeExecutor {
         int processStatus = ProcessStatus.SUCCESS;
         try {
             preExecute(runtimeContext);
+            doExecute(runtimeContext);
+        } catch (ProcessException pe) {
+            if (!ErrorEnum.isSuccess(pe.getErrNo())) {
+                processStatus = ProcessStatus.FAILED;
+                processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
+            }
+            throw pe;
+        } catch (Exception e) {
+            processInstanceDAO.updateErrorMsg(runtimeContext.getFlowInstanceId(), e);
+            throw e;
+        } finally {
+            runtimeContext.setProcessStatus(processStatus);
+            postExecute(runtimeContext);
+        }
+    }
+
+    public void executeAsync(RuntimeContext runtimeContext) throws ProcessException {
+        if (threadPoolTaskExecutor == null) {
+            LOGGER.error("threadPoolTaskExecutor is null 无法异步启动子流程");
+            throw new RuntimeException("threadPoolTaskExecutor is null");
+        }
+        preExecute(runtimeContext);
+        String parentNodeName = (String) runtimeContext.getParentRuntimeContext().getCurrentNodeModel().getProperties().get("name");
+
+        threadPoolTaskExecutor.submit(() -> {
+
+            Exception exception = null;
+            try {
+                asyncDoExecute(runtimeContext);
+            } catch (Exception e) {
+                exception = e;
+                LOGGER.error("流程异步处理异常", e);
+            }finally {
+                LOGGER.info("异步子流程执行完毕，流程实例id为：{}", runtimeContext.getFlowInstanceId());
+                subFlowStartService.asyncEndRecord(parentNodeName, "入参请从开始处查看", runtimeContext, exception, System.currentTimeMillis());
+            }
+
+        });
+    }
+
+
+    public void asyncDoExecute(RuntimeContext runtimeContext) throws ProcessException {
+        int processStatus = ProcessStatus.SUCCESS;
+        try {
             doExecute(runtimeContext);
         } catch (ProcessException pe) {
             if (!ErrorEnum.isSuccess(pe.getErrNo())) {
