@@ -66,7 +66,7 @@ public enum ErrorEnum {
 
     ROLLBACK_FAILED(4002,"Rollback task failed"),
 
-    COMMIT_REJECTRD(4003,"Commit rejected, flow is terminate"),
+    COMMIT_REJECTRD(4003,"运行中断，处理流程已被用户强制终止"),
 
     ROLLBACK_REJECTRD(4004,"Rollback rejected, non-running flowInstance to rollback"),
 

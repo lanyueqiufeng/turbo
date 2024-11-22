@@ -728,10 +728,10 @@ public class RuntimeProcessor {
             LOGGER.warn("checkIsSubFlowInstance failed: cannot find flowInstancePO from db.||flowInstanceId={}", flowInstanceId);
             throw new RuntimeException(ErrorEnum.GET_FLOW_INSTANCE_FAILED.getErrMsg());
         }
-        if (StringUtils.isNotBlank(flowInstancePO.getParentFlowInstanceId())) {
-            LOGGER.error("checkIsSubFlowInstance failed: don't receive sub-processes.||flowInstanceId={}", flowInstanceId);
-            throw new RuntimeException(ErrorEnum.NO_RECEIVE_SUB_FLOW_INSTANCE.getErrMsg());
-        }
+        // if (StringUtils.isNotBlank(flowInstancePO.getParentFlowInstanceId())) {
+        //     LOGGER.error("checkIsSubFlowInstance failed: don't receive sub-processes.||flowInstanceId={}", flowInstanceId);
+        //     throw new RuntimeException(ErrorEnum.NO_RECEIVE_SUB_FLOW_INSTANCE.getErrMsg());
+        // }
     }
 
 }

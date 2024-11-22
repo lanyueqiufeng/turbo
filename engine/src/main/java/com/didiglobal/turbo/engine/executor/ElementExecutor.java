@@ -1,10 +1,8 @@
 package com.didiglobal.turbo.engine.executor;
 
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
-import com.didiglobal.turbo.engine.common.ErrorEnum;
-import com.didiglobal.turbo.engine.common.FlowElementType;
-import com.didiglobal.turbo.engine.common.NodeInstanceStatus;
-import com.didiglobal.turbo.engine.common.RuntimeContext;
+import com.didiglobal.turbo.engine.common.*;
+import com.didiglobal.turbo.engine.entity.FlowInstancePO;
 import com.didiglobal.turbo.engine.entity.InstanceDataPO;
 import com.didiglobal.turbo.engine.entity.NodeInstancePO;
 import com.didiglobal.turbo.engine.exception.ProcessException;
@@ -86,6 +84,11 @@ public abstract class ElementExecutor extends RuntimeExecutor {
         currentNodeInstance.setInstanceDataId(StringUtils.defaultString(runtimeContext.getInstanceDataId(), StringUtils.EMPTY));
 
         runtimeContext.setCurrentNodeInstance(currentNodeInstance);
+        // 终止校验
+        FlowInstancePO flowInstancePO = processInstanceDAO.selectByFlowInstanceId(runtimeContext.getFlowInstanceId());
+        if (FlowInstanceStatus.TERMINATED == flowInstancePO.getStatus()) {
+            throw new ProcessException(ErrorEnum.COMMIT_REJECTRD);
+        }
     }
 
     protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {
