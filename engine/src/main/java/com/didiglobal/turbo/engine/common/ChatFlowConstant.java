@@ -35,6 +35,8 @@ public interface ChatFlowConstant {
          * 环节类型统一key
          */
         String NODE_TYPE = "nodeType";
+
+        String CATCH_ERROR = "catchError";
     }
 
     interface NodeType {
