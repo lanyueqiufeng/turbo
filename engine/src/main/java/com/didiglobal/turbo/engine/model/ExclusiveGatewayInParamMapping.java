@@ -165,7 +165,7 @@ public class ExclusiveGatewayInParamMapping {
                 }
             } else {
                 // 类型转换
-                nodeMap = (JSONObject) currentValue;
+                nodeMap = (Map<String, ?>) currentValue;
                 isArray = getItemValue(nodeMap, valueKeys, index + 1, results, isArray);
             }
         }
