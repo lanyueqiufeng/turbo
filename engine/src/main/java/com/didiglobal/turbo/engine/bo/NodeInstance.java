@@ -8,6 +8,9 @@ import java.util.List;
 
 public class NodeInstance extends ElementInstance {
     private String nodeInstanceId;
+    /**
+     * @see com.didiglobal.turbo.engine.common.FlowElementType
+     */
     private int flowElementType;
     private List<RuntimeResult> subNodeResultList;
     private Date createTime;
