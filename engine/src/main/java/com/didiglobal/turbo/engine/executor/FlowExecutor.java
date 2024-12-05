@@ -111,22 +111,6 @@ public class FlowExecutor extends RuntimeExecutor {
         });
     }
 
-    /**
-     * 兼容子流程无限嵌套能力
-     *
-     * @param runtimeResult 运行时上下文
-     * @return
-     */
-    private static RuntimeResult getRealRuntimeResult(RuntimeResult runtimeResult) {
-        List<RuntimeResult> subNodeResultList = runtimeResult.getActiveTaskInstance().getSubNodeResultList();
-        if (subNodeResultList != null && subNodeResultList.size() == 1) {
-            return getRealRuntimeResult(subNodeResultList.get(0));
-        } else {
-            return runtimeResult;
-        }
-    }
-
-
     public void asyncDoExecute(RuntimeContext runtimeContext) throws ProcessException {
         int processStatus = ProcessStatus.SUCCESS;
         try {
@@ -213,9 +197,6 @@ public class FlowExecutor extends RuntimeExecutor {
         // copy flow info & flowInstanceId
         BeanUtils.copyProperties(flowInstancePO, instanceDataPO);
         // fix primary key duplicated
-        instanceDataPO.setId(null);
-
-        // generate instanceDataId
         instanceDataPO.setId(null);
         instanceDataPO.setInstanceDataId(genId());
         instanceDataPO.setInstanceData(InstanceDataUtil.getInstanceDataListStr(instanceDataMap));
