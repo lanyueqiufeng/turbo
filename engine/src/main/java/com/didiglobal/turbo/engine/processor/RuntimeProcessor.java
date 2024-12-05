@@ -691,7 +691,7 @@ public class RuntimeProcessor {
         return fillRuntimeResult(runtimeResult, runtimeContext, errorEnum.getErrNo(), errorEnum.getErrMsg());
     }
 
-    private RuntimeResult fillRuntimeResult(RuntimeResult runtimeResult, RuntimeContext runtimeContext, TurboException e) {
+    public RuntimeResult fillRuntimeResult(RuntimeResult runtimeResult, RuntimeContext runtimeContext, TurboException e) {
         return fillRuntimeResult(runtimeResult, runtimeContext, e.getErrNo(), e.getErrMsg());
     }
 

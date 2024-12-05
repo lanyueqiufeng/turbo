@@ -9,9 +9,12 @@ import com.didiglobal.turbo.engine.entity.NodeInstanceLogPO;
 import com.didiglobal.turbo.engine.entity.NodeInstancePO;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.exception.ReentrantException;
+import com.didiglobal.turbo.engine.exception.SuspendException;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
-import com.didiglobal.turbo.engine.spi.SubFlowStartService;
+import com.didiglobal.turbo.engine.processor.RuntimeProcessor;
+import com.didiglobal.turbo.engine.result.RuntimeResult;
+import com.didiglobal.turbo.engine.spi.AsyncSubFlowStartService;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
 import com.google.common.collect.Lists;
@@ -40,12 +43,16 @@ public class FlowExecutor extends RuntimeExecutor {
     @Resource
     private ProcessInstanceDAO processInstanceDAO;
 
+    @Resource
+    protected RuntimeProcessor runtimeProcessor;
+
     @Resource(name = "agentThreadPoolTaskExecutor")
     @Lazy
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
     @Autowired(required = false)
-    private SubFlowStartService subFlowStartService;
+    @Lazy
+    private AsyncSubFlowStartService asyncSubFlowStartService;
 
     ////////////////////////////////////////execute////////////////////////////////////////
 
@@ -82,16 +89,41 @@ public class FlowExecutor extends RuntimeExecutor {
 
             Exception exception = null;
             try {
-                asyncDoExecute(runtimeContext);
-            } catch (Exception e) {
+                // Q：为什么要用两个try呢？
+                // A：因为针对SuspendException的处理过程也可能抛出异常，并且同样需要下面的finally处理 :(
+                try {
+                    asyncDoExecute(runtimeContext);
+                } catch (SuspendException e) {
+                    // 异步业务流 当业务流环节时不抛出异常，自动提交
+                    RuntimeResult asyncRuntimeResult = new RuntimeResult();
+                    runtimeProcessor.fillRuntimeResult(asyncRuntimeResult, runtimeContext, e);
+                    asyncSubFlowStartService.executeSubFlow(asyncRuntimeResult);
+                }
+
+            }catch (Exception e) {
                 exception = e;
                 LOGGER.error("流程异步处理异常", e);
-            }finally {
+            } finally {
                 LOGGER.info("异步子流程执行完毕，流程实例id为：{}", runtimeContext.getFlowInstanceId());
-                subFlowStartService.asyncEndRecord(parentNodeName, "入参请从开始处查看", runtimeContext, exception, System.currentTimeMillis());
+                asyncSubFlowStartService.asyncEndRecord(parentNodeName, "入参请从开始处查看", runtimeContext, exception, System.currentTimeMillis());
             }
 
         });
+    }
+
+    /**
+     * 兼容子流程无限嵌套能力
+     *
+     * @param runtimeResult 运行时上下文
+     * @return
+     */
+    private static RuntimeResult getRealRuntimeResult(RuntimeResult runtimeResult) {
+        List<RuntimeResult> subNodeResultList = runtimeResult.getActiveTaskInstance().getSubNodeResultList();
+        if (subNodeResultList != null && subNodeResultList.size() == 1) {
+            return getRealRuntimeResult(subNodeResultList.get(0));
+        } else {
+            return runtimeResult;
+        }
     }
 
 
