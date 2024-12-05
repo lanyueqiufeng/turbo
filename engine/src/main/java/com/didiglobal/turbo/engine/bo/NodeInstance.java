@@ -4,7 +4,9 @@ import com.didiglobal.turbo.engine.result.RuntimeResult;
 import com.google.common.base.MoreObjects;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class NodeInstance extends ElementInstance {
     private String nodeInstanceId;
@@ -15,6 +17,7 @@ public class NodeInstance extends ElementInstance {
     private List<RuntimeResult> subNodeResultList;
     private Date createTime;
     private Date modifyTime;
+    private Map<String, Object> properties = new HashMap<>();
 
     public String getNodeInstanceId() {
         return nodeInstanceId;
@@ -54,6 +57,24 @@ public class NodeInstance extends ElementInstance {
 
     public void setFlowElementType(int flowElementType) {
         this.flowElementType = flowElementType;
+    }
+
+    @Override
+    public Map<String, Object> getProperties() {
+        return properties;
+    }
+
+    @Override
+    public void setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+    }
+
+    public Object get(String key) {
+        return properties.get(key);
+    }
+
+    public void put(String key, Object value) {
+        properties.put(key, value);
     }
 
     @Override

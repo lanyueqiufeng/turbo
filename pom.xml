@@ -50,11 +50,17 @@
             <organization>Didi</organization>
             <organizationUrl>http://www.didiglobal.com</organizationUrl>
         </developer>
+        <developer>
+            <name>lanzhengjian</name>
+            <organization>Didi</organization>
+            <organizationUrl>http://www.didiglobal.com</organizationUrl>
+        </developer>
     </developers>
 
     <modules>
         <module>engine</module>
         <module>demo</module>
+        <module>parallel-plugin</module>
     </modules>
 
     <properties>

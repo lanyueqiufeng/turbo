@@ -212,6 +212,8 @@ public class FlowExecutor extends RuntimeExecutor {
         InstanceDataPO instanceDataPO = new InstanceDataPO();
         // copy flow info & flowInstanceId
         BeanUtils.copyProperties(flowInstancePO, instanceDataPO);
+        // fix primary key duplicated
+        instanceDataPO.setId(null);
 
         // generate instanceDataId
         instanceDataPO.setId(null);
@@ -243,6 +245,7 @@ public class FlowExecutor extends RuntimeExecutor {
         }
         NodeInstanceBO suspendNodeInstance = new NodeInstanceBO();
         suspendNodeInstance.setNodeKey(startEvent.getKey());
+        suspendNodeInstance.setNodeType(startEvent.getType());
         suspendNodeInstance.setStatus(NodeInstanceStatus.ACTIVE);
         suspendNodeInstance.setSourceNodeInstanceId(StringUtils.EMPTY);
         suspendNodeInstance.setSourceNodeKey(StringUtils.EMPTY);
@@ -339,6 +342,7 @@ public class FlowExecutor extends RuntimeExecutor {
             runtimeContext.setFlowInstanceStatus(FlowInstanceStatus.COMPLETED);
             suspendNodeInstance.setId(nodeInstancePO.getId());
             suspendNodeInstance.setNodeKey(nodeInstancePO.getNodeKey());
+            suspendNodeInstance.setNodeType(nodeInstancePO.getNodeType());
             suspendNodeInstance.setSourceNodeInstanceId(nodeInstancePO.getSourceNodeInstanceId());
             suspendNodeInstance.setSourceNodeKey(nodeInstancePO.getSourceNodeKey());
             suspendNodeInstance.setInstanceDataId(nodeInstancePO.getInstanceDataId());
@@ -718,7 +722,9 @@ public class FlowExecutor extends RuntimeExecutor {
 
     private NodeInstanceLogPO buildNodeInstanceLogPO(NodeInstancePO nodeInstancePO, int nodeInstanceType) {
         NodeInstanceLogPO nodeInstanceLogPO = new NodeInstanceLogPO();
+        // fix primary key duplicated
         BeanUtils.copyProperties(nodeInstancePO, nodeInstanceLogPO);
+        nodeInstanceLogPO.setId(null);
         nodeInstanceLogPO.setType(nodeInstanceType);
         return nodeInstanceLogPO;
     }

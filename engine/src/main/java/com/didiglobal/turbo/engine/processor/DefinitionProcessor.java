@@ -15,11 +15,9 @@ import com.didiglobal.turbo.engine.param.CreateFlowParam;
 import com.didiglobal.turbo.engine.param.DeployFlowParam;
 import com.didiglobal.turbo.engine.param.GetFlowModuleParam;
 import com.didiglobal.turbo.engine.param.UpdateFlowParam;
-import com.didiglobal.turbo.engine.result.CommonResult;
-import com.didiglobal.turbo.engine.result.CreateFlowResult;
-import com.didiglobal.turbo.engine.result.DeployFlowResult;
-import com.didiglobal.turbo.engine.result.FlowModuleResult;
-import com.didiglobal.turbo.engine.result.UpdateFlowResult;
+import com.didiglobal.turbo.engine.plugin.IdGeneratorPlugin;
+import com.didiglobal.turbo.engine.plugin.manager.PluginManager;
+import com.didiglobal.turbo.engine.result.*;
 import com.didiglobal.turbo.engine.util.IdGenerator;
 import com.didiglobal.turbo.engine.util.StrongUuidGenerator;
 import com.didiglobal.turbo.engine.validator.ModelValidator;
@@ -30,15 +28,20 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class DefinitionProcessor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefinitionProcessor.class);
 
-    private static final IdGenerator idGenerator = new StrongUuidGenerator();
+    private static IdGenerator idGenerator;
+
+    @Resource
+    private PluginManager pluginManager;
 
     @Resource
     private ModelValidator modelValidator;
@@ -48,6 +51,16 @@ public class DefinitionProcessor {
 
     @Resource
     private FlowDeploymentDAO flowDeploymentDAO;
+
+    @PostConstruct
+    public void init() {
+        List<IdGeneratorPlugin> idGeneratorPlugins = pluginManager.getPluginsFor(IdGeneratorPlugin.class);
+        if (null == idGeneratorPlugins || idGeneratorPlugins.isEmpty()) {
+            idGenerator = new StrongUuidGenerator();
+        } else {
+            idGenerator = idGeneratorPlugins.get(0).getIdGenerator();
+        }
+    }
 
     public CreateFlowResult create(CreateFlowParam createFlowParam) {
         CreateFlowResult createFlowResult = new CreateFlowResult();
@@ -123,6 +136,8 @@ public class DefinitionProcessor {
             modelValidator.validate(flowModel, deployFlowParam, ignoreCheck);
             FlowDeploymentPO flowDeploymentPO = new FlowDeploymentPO();
             BeanUtils.copyProperties(flowDefinitionPO, flowDeploymentPO);
+            // fix primary key duplicated
+            flowDeploymentPO.setId(null);
             String flowDeployId = idGenerator.getNextId();
             flowDeploymentPO.setFlowDeployId(flowDeployId);
             flowDeploymentPO.setStatus(FlowDeploymentStatus.DEPLOYED);
