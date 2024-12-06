@@ -71,6 +71,8 @@ public class ExecutorFactory {
         executorMap.put(FlowElementType.END_EVENT, endEventExecutor);
         executorMap.put(FlowElementType.USER_TASK, userTaskExecutor);
         executorMap.put(FlowElementType.EXCLUSIVE_GATEWAY, exclusiveGatewayExecutor);
+        executorMap.put(FlowElementType.REPLY_NODE, replyTaskExecutor);
+        executorMap.put(FlowElementType.SERVICE_TASK, serviceTaskExecutor);
         List<ElementPlugin> elementPlugins = pluginManager.getPluginsFor(ElementPlugin.class);
         elementPlugins.forEach(elementPlugin -> executorMap.put(elementPlugin.getFlowElementType(), elementPlugin.getElementExecutor()));
     }
