@@ -123,7 +123,7 @@ public class FlowModelValidator {
                 checkItemVo.setElementType(FlowModelUtil.getElementType(flowElement));
                 checkItemVo.setElementName(FlowModelUtil.getElementName(flowElement));
                 checkItemVo.setErrNo(e.getErrNo());
-                checkItemVo.setExceptionMsg(ErrorEnum.getErrorEnum(e.getErrNo()).getErrMsg());
+                checkItemVo.setExceptionMsg(e.getMessage());
                 checkItemVos.add(checkItemVo);
             }
             if (FlowElementType.START_EVENT == flowElement.getType()) {

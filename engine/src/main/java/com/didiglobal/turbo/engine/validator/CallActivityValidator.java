@@ -1,40 +1,28 @@
 package com.didiglobal.turbo.engine.validator;
 
-import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_EXECUTE_TYPE.SYNC;
-import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_EXECUTE_TYPE.ASYNC;
-import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_INSTANCE_TYPE.MULTIPLE;
-import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_INSTANCE_TYPE.SINGLE;
-import static com.didiglobal.turbo.engine.common.Constants.ELEMENT_PROPERTIES.CALL_ACTIVITY_EXECUTE_TYPE;
-import static com.didiglobal.turbo.engine.common.Constants.ELEMENT_PROPERTIES.CALL_ACTIVITY_FLOW_MODULE_ID;
-import static com.didiglobal.turbo.engine.common.Constants.ELEMENT_PROPERTIES.*;
-
 import com.didiglobal.turbo.engine.common.Constants;
 import com.didiglobal.turbo.engine.common.ErrorEnum;
-import com.didiglobal.turbo.engine.common.FlowDefinitionStatus;
 import com.didiglobal.turbo.engine.common.FlowElementType;
 import com.didiglobal.turbo.engine.config.BusinessConfig;
 import com.didiglobal.turbo.engine.dao.FlowDefinitionDAO;
 import com.didiglobal.turbo.engine.entity.FlowDefinitionPO;
 import com.didiglobal.turbo.engine.exception.DefinitionException;
-import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.FlowModel;
 import com.didiglobal.turbo.engine.param.CommonParam;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.google.common.collect.Maps;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
 
 import javax.annotation.Resource;
+import java.util.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_EXECUTE_TYPE.ASYNC;
+import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_EXECUTE_TYPE.SYNC;
+import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_INSTANCE_TYPE.MULTIPLE;
+import static com.didiglobal.turbo.engine.common.Constants.CALL_ACTIVITY_INSTANCE_TYPE.SINGLE;
+import static com.didiglobal.turbo.engine.common.Constants.ELEMENT_PROPERTIES.*;
 
 @Service
 public class CallActivityValidator extends ElementValidator {
@@ -44,6 +32,9 @@ public class CallActivityValidator extends ElementValidator {
 
     @Resource
     private FlowDefinitionDAO flowDefinitionDAO;
+
+    @Autowired(required = false)
+    private NodeValidatorInterface nodeValidator;
 
     @Override
     protected void validate(Map<String, FlowElement> flowElementMap, FlowElement flowElement, CommonParam commonParam) throws DefinitionException {
@@ -102,6 +93,7 @@ public class CallActivityValidator extends ElementValidator {
         if (!callActivityParamTypeSet.contains(callActivityOutParamType)) {
             throwElementValidatorException(flowElement, ErrorEnum.MODEL_UNKNOWN_ELEMENT_VALUE);
         }
+        nodeValidator.subFlowInputParamConfigCheck(flowElementMap, flowElement);
     }
 
     private void checkNestedLevel(Map<String, FlowElement> flowElementMap, FlowElement flowElement, CommonParam commonParam) throws DefinitionException {
@@ -153,5 +145,10 @@ public class CallActivityValidator extends ElementValidator {
         maxNestedLevel++; // add self
         flowModuleId2NestLevelCache.put(callActivityFlowModuleId, maxNestedLevel);
         return maxNestedLevel;
+    }
+
+    @Override
+    protected void check(Map<String, FlowElement> flowElementMap,FlowElement flowElement) throws DefinitionException {
+        validate(flowElementMap, flowElement, null);
     }
 }

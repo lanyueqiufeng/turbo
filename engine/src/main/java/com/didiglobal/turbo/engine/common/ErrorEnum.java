@@ -103,6 +103,9 @@ public enum ErrorEnum {
     NO_RECEIVE_SUB_FLOW_INSTANCE(4020,"Do not receive subFlowInstanceId"),
 
 
+    // 环节配置检查失败
+    FLOW_PROPERTIES_CHECK_FAILED(6001,"Flow properties check failed"),
+
     //5000~5999 系统错误
     //保留错误码
     SYSTEM_ERROR(5000,"System error"),
