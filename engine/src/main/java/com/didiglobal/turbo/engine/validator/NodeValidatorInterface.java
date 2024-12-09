@@ -13,4 +13,6 @@ public interface NodeValidatorInterface {
     void inputParamConfigCheck(Map<String, FlowElement> flowElementMap, FlowElement flowElement);
 
     void subFlowInputParamConfigCheck(Map<String, FlowElement> flowElementMap, FlowElement flowElement);
+
+    void replyTaskConfigCheck(Map<String, FlowElement> flowElementMap, FlowElement flowElement);
 }
