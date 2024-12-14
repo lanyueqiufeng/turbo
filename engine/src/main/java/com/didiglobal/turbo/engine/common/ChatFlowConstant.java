@@ -37,6 +37,8 @@ public interface ChatFlowConstant {
         String NODE_TYPE = "nodeType";
 
         String CATCH_ERROR = "catchError";
+
+        String NODE_TRIGGER = "nodeTrigger";
     }
 
     interface NodeType {
@@ -48,6 +50,8 @@ public interface ChatFlowConstant {
         String INTENT = "intent";
         // 知识库
         String KNOWLEDGE = "knowledge";
+        // 数据库问答
+        String DBQA = "dbqa";
         // 插件环节
         String PLUGIN = "plugin";
         // 大模型环节
