@@ -144,4 +144,15 @@ public class ProcessEngineImpl implements ProcessEngine {
     public InstanceDataListResult getInstanceData(String flowInstanceId, String instanceDataId, boolean effectiveForSubFlowInstance) {
         return runtimeProcessor.getInstanceData(flowInstanceId, instanceDataId, effectiveForSubFlowInstance);
     }
+
+
+    /**
+     * 清理流程实例所有相关数据
+     *
+     * @param flowInstanceId 流程实例id
+     */
+    @Override
+    public void clearFlowInstanceInfo(String flowInstanceId) {
+        runtimeProcessor.clearFlowInstanceInfo(flowInstanceId);
+    }
 }

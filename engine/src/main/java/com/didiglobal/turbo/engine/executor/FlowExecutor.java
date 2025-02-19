@@ -24,6 +24,7 @@ import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -106,6 +107,7 @@ public class FlowExecutor extends RuntimeExecutor {
             } finally {
                 LOGGER.info("异步子流程执行完毕，流程实例id为：{}", runtimeContext.getFlowInstanceId());
                 asyncSubFlowStartService.asyncEndRecord(parentNodeName, "入参请从开始处查看", runtimeContext, exception, System.currentTimeMillis());
+                MDC.clear();
             }
 
         });

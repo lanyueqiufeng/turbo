@@ -2,12 +2,10 @@ package com.didiglobal.turbo.engine.processor;
 
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.didiglobal.turbo.engine.bo.*;
 import com.didiglobal.turbo.engine.common.*;
-import com.didiglobal.turbo.engine.dao.FlowDeploymentDAO;
-import com.didiglobal.turbo.engine.dao.FlowInstanceMappingDAO;
-import com.didiglobal.turbo.engine.dao.NodeInstanceDAO;
-import com.didiglobal.turbo.engine.dao.ProcessInstanceDAO;
+import com.didiglobal.turbo.engine.dao.*;
 import com.didiglobal.turbo.engine.entity.*;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.exception.ReentrantException;
@@ -66,6 +64,9 @@ public class RuntimeProcessor {
 
     @Resource
     private NodeInstanceService nodeInstanceService;
+
+    @Resource
+    private InstanceDataDAO instanceDataDAO;
 
     ////////////////////////////////////////startProcess////////////////////////////////////////
 
@@ -768,4 +769,33 @@ public class RuntimeProcessor {
         // }
     }
 
+    /**
+     * 清理流程实例所有相关数据
+     *
+     * @param flowInstanceId 流程实例id
+     */
+    public void clearFlowInstanceInfo(String flowInstanceId) {
+        Set<String> flowInstanceIdSet = new HashSet<>();
+        // 查询所有子流程实例id
+        List<FlowInstanceMappingPO> flowInstanceMappingPOS = flowInstanceMappingDAO.list(new LambdaQueryWrapper<FlowInstanceMappingPO>()
+                .eq(FlowInstanceMappingPO::getFlowInstanceId, flowInstanceId));
+        findAllSubFlowInstanceId(flowInstanceMappingPOS, flowInstanceIdSet);
+        // 开始清理 data表
+        instanceDataDAO.remove(new LambdaQueryWrapper<InstanceDataPO>().in(InstanceDataPO::getFlowInstanceId, flowInstanceIdSet));
+        nodeInstanceDAO.remove(new LambdaQueryWrapper<NodeInstancePO>().in(NodeInstancePO::getFlowInstanceId, flowInstanceIdSet));
+        // processInstanceDAO.remove(new LambdaQueryWrapper<FlowInstancePO>().in(FlowInstancePO::getFlowInstanceId, flowInstanceIdSet));
+        flowInstanceMappingDAO.remove(new LambdaQueryWrapper<FlowInstanceMappingPO>().in(FlowInstanceMappingPO::getFlowInstanceId, flowInstanceIdSet));
+    }
+
+    void findAllSubFlowInstanceId(List<FlowInstanceMappingPO> flowInstanceMappingPOS, Set<String> flowInstanceIdSet) {
+        if (flowInstanceMappingPOS == null || flowInstanceMappingPOS.isEmpty()) {
+            return;
+        }
+        for (FlowInstanceMappingPO flowInstanceMappingPO : flowInstanceMappingPOS) {
+            flowInstanceIdSet.add(flowInstanceMappingPO.getFlowInstanceId());
+            List<FlowInstanceMappingPO> subflowInstanceMappingPOS = flowInstanceMappingDAO.list(new LambdaQueryWrapper<FlowInstanceMappingPO>()
+                    .eq(FlowInstanceMappingPO::getFlowInstanceId, flowInstanceMappingPO.getSubFlowInstanceId()));
+            findAllSubFlowInstanceId(subflowInstanceMappingPOS, flowInstanceIdSet);
+        }
+    }
 }
