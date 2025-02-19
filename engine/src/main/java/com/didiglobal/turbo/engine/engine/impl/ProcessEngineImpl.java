@@ -23,6 +23,7 @@ import com.didiglobal.turbo.engine.result.RollbackTaskResult;
 import com.didiglobal.turbo.engine.result.StartProcessResult;
 import com.didiglobal.turbo.engine.result.TerminateResult;
 import com.didiglobal.turbo.engine.result.UpdateFlowResult;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -147,11 +148,12 @@ public class ProcessEngineImpl implements ProcessEngine {
 
 
     /**
-     * 清理流程实例所有相关数据
+     * 异步清理流程实例所有相关数据
      *
      * @param flowInstanceId 流程实例id
      */
     @Override
+    @Async
     public void clearFlowInstanceInfo(String flowInstanceId) {
         runtimeProcessor.clearFlowInstanceInfo(flowInstanceId);
     }
