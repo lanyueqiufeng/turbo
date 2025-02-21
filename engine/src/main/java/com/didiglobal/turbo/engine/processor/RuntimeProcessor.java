@@ -776,6 +776,7 @@ public class RuntimeProcessor {
      */
     public void clearFlowInstanceInfo(String flowInstanceId) {
         Set<String> flowInstanceIdSet = new HashSet<>();
+        flowInstanceIdSet.add(flowInstanceId);
         // 查询所有子流程实例id
         List<FlowInstanceMappingPO> flowInstanceMappingPOS = flowInstanceMappingDAO.list(new LambdaQueryWrapper<FlowInstanceMappingPO>()
                 .eq(FlowInstanceMappingPO::getFlowInstanceId, flowInstanceId));
