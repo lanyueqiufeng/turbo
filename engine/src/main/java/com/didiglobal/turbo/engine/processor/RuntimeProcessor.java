@@ -795,7 +795,7 @@ public class RuntimeProcessor {
             return;
         }
         for (FlowInstanceMappingPO flowInstanceMappingPO : flowInstanceMappingPOS) {
-            flowInstanceIdSet.add(flowInstanceMappingPO.getFlowInstanceId());
+            flowInstanceIdSet.add(flowInstanceMappingPO.getSubFlowInstanceId());
             List<FlowInstanceMappingPO> subflowInstanceMappingPOS = flowInstanceMappingDAO.list(new LambdaQueryWrapper<FlowInstanceMappingPO>()
                     .eq(FlowInstanceMappingPO::getFlowInstanceId, flowInstanceMappingPO.getSubFlowInstanceId()));
             findAllSubFlowInstanceId(subflowInstanceMappingPOS, flowInstanceIdSet);
