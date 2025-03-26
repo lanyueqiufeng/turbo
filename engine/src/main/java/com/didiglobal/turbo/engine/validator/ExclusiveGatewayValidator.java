@@ -2,6 +2,7 @@ package com.didiglobal.turbo.engine.validator;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.didiglobal.turbo.engine.common.ChatFlowConstant;
 import com.didiglobal.turbo.engine.common.ErrorEnum;
 import com.didiglobal.turbo.engine.exception.DefinitionException;
 import com.didiglobal.turbo.engine.model.FlowElement;
@@ -11,8 +12,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 public class ExclusiveGatewayValidator extends ElementValidator {
@@ -28,6 +31,11 @@ public class ExclusiveGatewayValidator extends ElementValidator {
         }
 
         List<String> outgoingList = flowElement.getOutgoing();
+
+        Set<String> keySet = new HashSet<>();
+        keySet.add(ChatFlowConstant.InstanceKey.AGENT_MAP);
+        keySet.addAll(flowElementMap.keySet());
+
         //读取分支条件
         JSONArray conditionList = (JSONArray) flowElement.getProperties().get("conditionList");
         //最少有两条分支
@@ -64,6 +72,12 @@ public class ExclusiveGatewayValidator extends ElementValidator {
                 if (StringUtils.isBlank(name)) {
                     throwElementValidatorException(flowElement, ErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES);
                 }
+                if (!keySet.contains(act)) {
+                    String actName = StringUtils.isBlank(
+                            conditionItem.getString("actName")) ? act : conditionItem.getString("actName");
+                    throw new DefinitionException(6001,
+                            "分支" + (k + 1) + "变量参数：" + name + " 绑定的环节:" + actName + "已被删除或替换，请重新绑定该参数");
+                }
                 //比较符号
                 String conditionItemOperator = conditionItem.getString("operator");
                 if (StringUtils.isBlank(conditionItemOperator)) {
@@ -76,13 +90,21 @@ public class ExclusiveGatewayValidator extends ElementValidator {
                 }
                 //如果是引用类型，此值表示引用节点的id
                 String nodeKey = conditionItem.getString("nodeKey");
-                if (from.equals("Reference") && StringUtils.isBlank(nodeKey) && !"isNull".equals(conditionItemOperator) && !"isNotNull".equals(conditionItemOperator)) {
+                if (from.equals("Reference") && StringUtils.isBlank(nodeKey) && !"isNull".equals(
+                        conditionItemOperator) && !"isNotNull".equals(conditionItemOperator)) {
                     throwElementValidatorException(flowElement, ErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES);
                 }
                 //如果是引用类型，此值表示引用节点的变量名
                 Object value = conditionItem.get("value");
-                if (from.equals("Reference") && StringUtils.isBlank((String) value) && !"isNull".equals(conditionItemOperator) && !"isNotNull".equals(conditionItemOperator)) {
+                if (from.equals("Reference") && StringUtils.isBlank((String) value) && !"isNull".equals(
+                        conditionItemOperator) && !"isNotNull".equals(conditionItemOperator)) {
                     throwElementValidatorException(flowElement, ErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES);
+                }
+                if (from.equals("Reference") && !keySet.contains(nodeKey)) {
+                    String nodeName = StringUtils.isBlank(
+                            conditionItem.getString("nodeName")) ? act : conditionItem.getString("nodeName");
+                    throw new DefinitionException(6001,
+                            "分支" + (k + 1) + "比较参数：" + value + " 绑定的环节:" + nodeName + "已被删除或替换，请重新绑定该参数");
                 }
             }
 
