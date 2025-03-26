@@ -76,7 +76,7 @@ public class ExclusiveGatewayValidator extends ElementValidator {
                     String actName = StringUtils.isBlank(
                             conditionItem.getString("actName")) ? act : conditionItem.getString("actName");
                     throw new DefinitionException(6001,
-                            "分支" + (k + 1) + "变量参数：" + name + " 绑定的环节:" + actName + "已被删除或替换，请重新绑定该参数");
+                            "分支" + (i + 1) + "变量参数：" + name + " 绑定的环节:" + actName + "已被删除或替换，请重新绑定该参数");
                 }
                 //比较符号
                 String conditionItemOperator = conditionItem.getString("operator");
@@ -104,7 +104,7 @@ public class ExclusiveGatewayValidator extends ElementValidator {
                     String nodeName = StringUtils.isBlank(
                             conditionItem.getString("nodeName")) ? nodeKey : conditionItem.getString("nodeName");
                     throw new DefinitionException(6001,
-                            "分支" + (k + 1) + "比较参数：" + value + " 绑定的环节:" + nodeName + "已被删除或替换，请重新绑定该参数");
+                            "分支" + (i + 1) + "比较参数：" + value + " 绑定的环节:" + nodeName + "已被删除或替换，请重新绑定该参数");
                 }
             }
 
