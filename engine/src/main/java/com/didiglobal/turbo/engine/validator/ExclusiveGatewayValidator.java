@@ -102,7 +102,7 @@ public class ExclusiveGatewayValidator extends ElementValidator {
                 }
                 if (from.equals("Reference") && !keySet.contains(nodeKey)) {
                     String nodeName = StringUtils.isBlank(
-                            conditionItem.getString("nodeName")) ? act : conditionItem.getString("nodeName");
+                            conditionItem.getString("nodeName")) ? nodeKey : conditionItem.getString("nodeName");
                     throw new DefinitionException(6001,
                             "分支" + (k + 1) + "比较参数：" + value + " 绑定的环节:" + nodeName + "已被删除或替换，请重新绑定该参数");
                 }
