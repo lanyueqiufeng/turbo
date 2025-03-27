@@ -8,6 +8,8 @@ import com.didiglobal.turbo.engine.model.*;
 import com.didiglobal.turbo.engine.param.*;
 import com.didiglobal.turbo.engine.result.*;
 
+import java.util.List;
+
 /**
  * The entrance of Turbo
  * <p>
@@ -243,4 +245,10 @@ public interface ProcessEngine {
      * @param flowInstanceId 流程实例id
      */
     void clearFlowInstanceInfo(String flowInstanceId);
+
+    /**
+     * 清理流程实例所有相关数据
+     * @param flowInstanceIds 流程实例ids
+     */
+    void clearFlowInstanceInfo(List<String> flowInstanceIds);
 }

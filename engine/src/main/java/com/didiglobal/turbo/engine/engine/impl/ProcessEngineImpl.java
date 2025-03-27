@@ -27,6 +27,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.Collections;
+import java.util.List;
 
 @Service
 public class ProcessEngineImpl implements ProcessEngine {
@@ -155,6 +157,12 @@ public class ProcessEngineImpl implements ProcessEngine {
     @Override
     @Async
     public void clearFlowInstanceInfo(String flowInstanceId) {
-        runtimeProcessor.clearFlowInstanceInfo(flowInstanceId);
+        runtimeProcessor.clearFlowInstanceInfo(Collections.singletonList(flowInstanceId));
+    }
+
+    @Async
+    @Override
+    public void clearFlowInstanceInfo(List<String> flowInstanceIds) {
+        runtimeProcessor.clearFlowInstanceInfo(flowInstanceIds);
     }
 }
