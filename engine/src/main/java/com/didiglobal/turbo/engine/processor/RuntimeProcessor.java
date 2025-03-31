@@ -814,7 +814,7 @@ public class RuntimeProcessor {
         Set<String> flowInstanceIdSet = new HashSet<>(flowInstanceId);
         // 查询所有子流程实例id
         List<FlowInstanceMappingPO> flowInstanceMappingPOS = flowInstanceMappingDAO.list(new LambdaQueryWrapper<FlowInstanceMappingPO>()
-                .eq(FlowInstanceMappingPO::getFlowInstanceId, flowInstanceId));
+                .in(FlowInstanceMappingPO::getFlowInstanceId, flowInstanceId));
         findAllSubFlowInstanceId(flowInstanceMappingPOS, flowInstanceIdSet);
         if (flowInstanceIdSet.size() > 0) {
             // 开始清理 data表
