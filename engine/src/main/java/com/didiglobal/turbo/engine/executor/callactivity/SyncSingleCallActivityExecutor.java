@@ -135,13 +135,15 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
     }
 
     protected void startProcessCallActivity(RuntimeContext runtimeContext) throws ProcessException {
-        NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
-        // 1.check reentrant execute
-        FlowInstanceMappingPO flowInstanceMappingPO = flowInstanceMappingDAO.selectFlowInstanceMappingPO(runtimeContext.getFlowInstanceId(), currentNodeInstance.getNodeInstanceId());
-        if (flowInstanceMappingPO != null) {
-            handleReentrantSubFlowInstance(runtimeContext, flowInstanceMappingPO);
-            return;
-        }
+        // XXX：2025年4月14日 关闭turbo的防重入检测，支持过程重新执行
+        // NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
+        // // 1.check reentrant execute
+        // FlowInstanceMappingPO flowInstanceMappingPO = flowInstanceMappingDAO.selectFlowInstanceMappingPO(runtimeContext.getFlowInstanceId(), currentNodeInstance.getNodeInstanceId());
+        // if (flowInstanceMappingPO != null) {
+        //     handleReentrantSubFlowInstance(runtimeContext, flowInstanceMappingPO);
+        //     return;
+        // }
+
         // 2.check CallActivity nested level
         preCheckCallActivityNestedLevel(runtimeContext);
 
