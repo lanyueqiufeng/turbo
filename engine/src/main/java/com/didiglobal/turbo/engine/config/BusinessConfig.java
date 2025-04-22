@@ -37,7 +37,7 @@ public class BusinessConfig {
         JSONObject callActivityNestedLevelJO = JSON.parseObject(callActivityNestedLevel);
         if (callActivityNestedLevelJO.containsKey(caller)) {
             int callActivityNestedLevel = callActivityNestedLevelJO.getIntValue(caller);
-            if (MAX_FLOW_NESTED_LEVEL < callActivityNestedLevel) {
+            if (MAX_FLOW_NESTED_LEVEL > callActivityNestedLevel) {
                 return MAX_FLOW_NESTED_LEVEL;
             } else {
                 return callActivityNestedLevel;
