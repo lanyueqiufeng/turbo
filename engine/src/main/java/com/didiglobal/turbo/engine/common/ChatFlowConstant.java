@@ -5,6 +5,7 @@ package com.didiglobal.turbo.engine.common;
  * @date 2024/7/29 14:25
  */
 public interface ChatFlowConstant {
+
     interface InstanceKey {
         String START_OUTPUT = "startOutput";
         String END_OUTPUT = "endOutput";
