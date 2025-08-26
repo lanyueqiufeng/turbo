@@ -2,10 +2,7 @@ package com.didiglobal.turbo.engine.executor.callactivity;
 
 import com.alibaba.fastjson.JSON;
 import com.didiglobal.turbo.engine.bo.DataTransferBO;
-import com.didiglobal.turbo.engine.common.Constants;
-import com.didiglobal.turbo.engine.common.ErrorEnum;
-import com.didiglobal.turbo.engine.common.InstanceDataType;
-import com.didiglobal.turbo.engine.common.RuntimeContext;
+import com.didiglobal.turbo.engine.common.*;
 import com.didiglobal.turbo.engine.config.BusinessConfig;
 import com.didiglobal.turbo.engine.dao.FlowDeploymentDAO;
 import com.didiglobal.turbo.engine.entity.InstanceDataPO;
@@ -21,12 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 
 import javax.annotation.Resource;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Some common CallActivity methods
@@ -113,7 +105,8 @@ public abstract class AbstractCallActivityExecutor extends ElementExecutor {
         InstanceDataPO instanceDataPO = new InstanceDataPO();
         BeanUtils.copyProperties(runtimeContext, instanceDataPO);
         instanceDataPO.setInstanceDataId(instanceDataId);
-        instanceDataPO.setInstanceData(InstanceDataUtil.getInstanceDataListStr(runtimeContext.getInstanceDataMap()));
+        instanceDataPO.setInstanceData(InstanceDataUtil.getInstanceDataListStr(runtimeContext.getInstanceDataMap(),true));
+        instanceDataPO.getProperties().put(ChatFlowConstant.InstanceKey.FLOW_MAP, InstanceDataUtil.getFlowMapStr(runtimeContext.getInstanceDataMap()));
         instanceDataPO.setNodeInstanceId(runtimeContext.getCurrentNodeInstance().getNodeInstanceId());
         instanceDataPO.setNodeKey(runtimeContext.getCurrentNodeModel().getKey());
         instanceDataPO.setType(InstanceDataType.UPDATE);

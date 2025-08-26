@@ -1,6 +1,5 @@
 package com.didiglobal.turbo.engine.executor;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
@@ -19,7 +18,6 @@ import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -100,18 +98,6 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
         InstanceDataPO instanceDataPO = buildHookInstanceData(instanceDataId, runtimeContext);
         instanceDataDAO.insert(instanceDataPO);
         return instanceDataId;
-    }
-
-    private InstanceDataPO buildHookInstanceData(String instanceDataId, RuntimeContext runtimeContext) {
-        InstanceDataPO instanceDataPO = new InstanceDataPO();
-        BeanUtils.copyProperties(runtimeContext, instanceDataPO);
-        instanceDataPO.setInstanceDataId(instanceDataId);
-        instanceDataPO.setInstanceData(InstanceDataUtil.getInstanceDataListStr(runtimeContext.getInstanceDataMap()));
-        instanceDataPO.setNodeInstanceId(runtimeContext.getCurrentNodeInstance().getNodeInstanceId());
-        instanceDataPO.setNodeKey(runtimeContext.getCurrentNodeModel().getKey());
-        instanceDataPO.setType(InstanceDataType.HOOK);
-        instanceDataPO.setCreateTime(new Date());
-        return instanceDataPO;
     }
 
     @Override

@@ -201,8 +201,8 @@ public class FlowExecutor extends RuntimeExecutor {
         // fix primary key duplicated
         instanceDataPO.setId(null);
         instanceDataPO.setInstanceDataId(genId());
-        instanceDataPO.setInstanceData(InstanceDataUtil.getInstanceDataListStr(instanceDataMap));
-
+        instanceDataPO.setInstanceData(InstanceDataUtil.getInstanceDataListStr(instanceDataMap, true));
+        instanceDataPO.getProperties().put(ChatFlowConstant.InstanceKey.FLOW_MAP, InstanceDataUtil.getFlowMapStr(instanceDataMap));
         instanceDataPO.setNodeInstanceId(StringUtils.EMPTY);
         instanceDataPO.setNodeKey(StringUtils.EMPTY);
         instanceDataPO.setCreateTime(new Date());
@@ -376,8 +376,8 @@ public class FlowExecutor extends RuntimeExecutor {
         instanceDataPO.setCreateTime(new Date());
 
         instanceDataPO.setInstanceDataId(newInstanceDataId);
-        instanceDataPO.setInstanceData(InstanceDataUtil.getInstanceDataListStr(instanceDataMap));
-
+        instanceDataPO.setInstanceData(InstanceDataUtil.getInstanceDataListStr(instanceDataMap,true));
+        instanceDataPO.getProperties().put(ChatFlowConstant.InstanceKey.FLOW_MAP, InstanceDataUtil.getFlowMapStr(instanceDataMap));
         return instanceDataPO;
     }
 

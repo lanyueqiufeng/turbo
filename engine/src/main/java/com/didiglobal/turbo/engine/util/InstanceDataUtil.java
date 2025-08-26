@@ -2,6 +2,7 @@ package com.didiglobal.turbo.engine.util;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.didiglobal.turbo.engine.common.ChatFlowConstant;
 import com.didiglobal.turbo.engine.common.DataType;
 import com.didiglobal.turbo.engine.model.InstanceData;
 import com.google.common.collect.Lists;
@@ -84,11 +85,29 @@ public class InstanceDataUtil {
         return instanceDataList;
     }
 
-    public static String getInstanceDataListStr(Map<String, InstanceData> instanceDataMap) {
+    /**
+     * 将流程实例参数参数转换为listString
+     *
+     * @param instanceDataMap 流程实例参数池
+     * @param removeFlowMap   是否移除流程参数池
+     * @return
+     */
+    public static String getInstanceDataListStr(Map<String, InstanceData> instanceDataMap, Boolean removeFlowMap) {
         if (MapUtils.isEmpty(instanceDataMap)) {
             return JSONObject.toJSONString(CollectionUtils.EMPTY_COLLECTION);
         }
-        return JSONObject.toJSONString(instanceDataMap.values());
+        Map<String, InstanceData> copyInstanceDataMap = Maps.newHashMap(instanceDataMap);
+        if (removeFlowMap) {
+            copyInstanceDataMap.remove(ChatFlowConstant.InstanceKey.FLOW_MAP);
+        }
+        return JSONObject.toJSONString(copyInstanceDataMap.values());
+    }
+
+    public static String getFlowMapStr(Map<String, InstanceData> instanceDataMap) {
+        if (MapUtils.isEmpty(instanceDataMap)) {
+            return JSONObject.toJSONString(CollectionUtils.EMPTY_COLLECTION);
+        }
+        return JSONObject.toJSONString(instanceDataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP));
     }
 
     public static Map<String, Object> parseInstanceDataMap(Map<String, InstanceData> instanceDataMap) {

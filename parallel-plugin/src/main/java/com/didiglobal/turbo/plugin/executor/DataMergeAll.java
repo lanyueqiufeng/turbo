@@ -1,10 +1,11 @@
 package com.didiglobal.turbo.plugin.executor;
 
-import com.didiglobal.turbo.plugin.common.MergeStrategy;
+import com.didiglobal.turbo.engine.common.ChatFlowConstant;
 import com.didiglobal.turbo.engine.common.RuntimeContext;
 import com.didiglobal.turbo.engine.entity.InstanceDataPO;
 import com.didiglobal.turbo.engine.model.InstanceData;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
+import com.didiglobal.turbo.plugin.common.MergeStrategy;
 import com.google.common.collect.Maps;
 import org.springframework.stereotype.Component;
 
@@ -25,7 +26,8 @@ public class DataMergeAll extends DataMergeStrategy{
         forkInstanceDataMap.putAll(instanceDataMap);
 
         runtimeContext.setInstanceDataMap(forkInstanceDataMap);
-        String dataListStr = InstanceDataUtil.getInstanceDataListStr(forkInstanceDataMap);
+        String dataListStr = InstanceDataUtil.getInstanceDataListStr(forkInstanceDataMap, true);
+        joinNodeInstanceData.getProperties().put(ChatFlowConstant.InstanceKey.FLOW_MAP, InstanceDataUtil.getFlowMapStr(forkInstanceDataMap));
         joinNodeInstanceData.setInstanceData(dataListStr);
         return joinNodeInstanceData;
     }

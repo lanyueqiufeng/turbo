@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 
 import javax.annotation.Resource;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -326,5 +327,18 @@ public abstract class ElementExecutor extends RuntimeExecutor {
     protected boolean processCondition(String expression, Map<String, InstanceData> instanceDataMap) throws ProcessException {
         Map<String, Object> dataMap = InstanceDataUtil.parseInstanceDataMap(instanceDataMap);
         return expressionCalculator.calculate(expression, dataMap);
+    }
+
+    public InstanceDataPO buildHookInstanceData(String instanceDataId, RuntimeContext runtimeContext) {
+        InstanceDataPO instanceDataPO = new InstanceDataPO();
+        BeanUtils.copyProperties(runtimeContext, instanceDataPO);
+        instanceDataPO.setInstanceDataId(instanceDataId);
+        instanceDataPO.setInstanceData(InstanceDataUtil.getInstanceDataListStr(runtimeContext.getInstanceDataMap(), true));
+        instanceDataPO.getProperties().put(ChatFlowConstant.InstanceKey.FLOW_MAP, InstanceDataUtil.getFlowMapStr(runtimeContext.getInstanceDataMap()));
+        instanceDataPO.setNodeInstanceId(runtimeContext.getCurrentNodeInstance().getNodeInstanceId());
+        instanceDataPO.setNodeKey(runtimeContext.getCurrentNodeModel().getKey());
+        instanceDataPO.setType(InstanceDataType.HOOK);
+        instanceDataPO.setCreateTime(new Date());
+        return instanceDataPO;
     }
 }

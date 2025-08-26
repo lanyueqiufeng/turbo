@@ -1,6 +1,7 @@
 package com.didiglobal.turbo.plugin.executor;
 
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
+import com.didiglobal.turbo.engine.common.ChatFlowConstant;
 import com.didiglobal.turbo.engine.common.InstanceDataType;
 import com.didiglobal.turbo.engine.common.NodeInstanceType;
 import com.didiglobal.turbo.engine.common.RuntimeContext;
@@ -19,7 +20,6 @@ import com.didiglobal.turbo.plugin.util.ExecutorUtil;
 import org.springframework.beans.BeanUtils;
 
 import javax.annotation.Resource;
-
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -76,7 +76,8 @@ public abstract class BranchMergeStrategy {
         po.setInstanceDataId(genId());
         po.setCreateTime(new Date());
         po.setTenant(runtimeContext.getTenant());
-        po.setInstanceData(InstanceDataUtil.getInstanceDataListStr(runtimeContext.getInstanceDataMap()));
+        po.setInstanceData(InstanceDataUtil.getInstanceDataListStr(runtimeContext.getInstanceDataMap(),true));
+        po.getProperties().put(ChatFlowConstant.InstanceKey.FLOW_MAP, InstanceDataUtil.getFlowMapStr(runtimeContext.getInstanceDataMap()));
         po.setNodeInstanceId(currentNodeInstance.getNodeInstanceId());
         po.setNodeKey(currentNodeInstance.getNodeKey());
         return po;
