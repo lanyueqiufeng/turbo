@@ -98,7 +98,9 @@ public class InstanceDataUtil {
         }
         Map<String, InstanceData> copyInstanceDataMap = Maps.newHashMap(instanceDataMap);
         if (removeFlowMap) {
-            copyInstanceDataMap.remove(ChatFlowConstant.InstanceKey.FLOW_MAP);
+            InstanceData flowMap = copyInstanceDataMap.remove(ChatFlowConstant.InstanceKey.FLOW_MAP);
+            JSONObject agentMap = ((JSONObject) flowMap.getValue()).getJSONObject(ChatFlowConstant.InstanceKey.AGENT_MAP);
+            copyInstanceDataMap.put(ChatFlowConstant.InstanceKey.AGENT_MAP, new InstanceData(ChatFlowConstant.InstanceKey.AGENT_MAP, agentMap));
         }
         return JSONObject.toJSONString(copyInstanceDataMap.values());
     }

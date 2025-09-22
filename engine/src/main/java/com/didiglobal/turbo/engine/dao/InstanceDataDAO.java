@@ -1,21 +1,25 @@
 package com.didiglobal.turbo.engine.dao;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.didiglobal.turbo.engine.common.ChatFlowConstant;
 import com.didiglobal.turbo.engine.common.ErrorEnum;
 import com.didiglobal.turbo.engine.common.InstanceDataType;
 import com.didiglobal.turbo.engine.dao.mapper.InstanceDataMapper;
 import com.didiglobal.turbo.engine.entity.FlowInstanceDataPo;
 import com.didiglobal.turbo.engine.entity.InstanceDataPO;
 import com.didiglobal.turbo.engine.exception.TurboException;
+import com.didiglobal.turbo.engine.model.InstanceData;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Repository;
 
 import javax.annotation.Resource;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
+import java.util.Objects;
 
 import static com.didiglobal.turbo.engine.common.ChatFlowConstant.InstanceKey.FLOW_MAP;
 
@@ -41,8 +45,21 @@ public class InstanceDataDAO extends BaseDAO<InstanceDataMapper, InstanceDataPO>
                         instanceDataPO.setInstanceData(JSON.toJSONString(Collections.singletonList(flowInstanceDataStr)));
                     } else {
                         // 非空的话  追加参数池进去
-                        JSONArray instanceDataList = JSON.parseArray(instanceDataStr);
-                        instanceDataList.add(JSON.parseObject(flowInstanceDataStr));
+                        List<InstanceData> instanceDataList = JSON.parseArray(instanceDataStr, InstanceData.class);
+                        InstanceData flowMapInstanceData = JSON.parseObject(flowInstanceDataStr, InstanceData.class);
+                        // 正常环节实例数据与流程实例数据是一一对应的   但是如果查出来发现不一致  说明发生流程异常重入   此时就需要用环节内保存的全局变量来还原  避免数据异常
+                        if (!Objects.equals(instanceDataPO.getNodeInstanceId(), flowInstanceData.getLastNodeInsId())) {
+                            // 把$agent提取出来做覆盖
+                            for(InstanceData instanceData : instanceDataList) {
+                                if (ChatFlowConstant.InstanceKey.AGENT_MAP.equals(instanceData.getKey())) {
+                                    JSONObject flowMap = (JSONObject) flowMapInstanceData.getValue();
+                                    flowMap.put(ChatFlowConstant.InstanceKey.AGENT_MAP, instanceData.getValue());
+                                }
+                            }
+                        }
+                        if (flowMapInstanceData != null) {
+                            instanceDataList.add(flowMapInstanceData);
+                        }
                         instanceDataPO.setInstanceData(JSON.toJSONString(instanceDataList));
                     }
                 }
