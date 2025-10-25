@@ -10,7 +10,6 @@ import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
 import com.didiglobal.turbo.engine.spi.ServiceTaskExecuteService;
-import org.apache.commons.collections4.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -44,10 +43,10 @@ public class ServiceTaskExecutor extends ElementExecutor {
         }
         flowMap.put(runtimeContext.getCurrentNodeInstance().getNodeKey(), nodeMap);
         // 数据持久化
-        if (MapUtils.isNotEmpty(dataMap)) {
-            String instanceDataId = saveInstanceDataPO(runtimeContext);
-            runtimeContext.setInstanceDataId(instanceDataId);
-        }
+        // if (MapUtils.isNotEmpty(dataMap)) {
+        //     String instanceDataId = saveInstanceDataPO(runtimeContext);
+        //     runtimeContext.setInstanceDataId(instanceDataId);
+        // }
     }
 
     public String saveInstanceDataPO(RuntimeContext runtimeContext) {

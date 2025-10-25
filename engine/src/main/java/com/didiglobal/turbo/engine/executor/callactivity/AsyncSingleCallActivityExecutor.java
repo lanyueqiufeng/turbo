@@ -57,19 +57,19 @@ public class AsyncSingleCallActivityExecutor extends SyncSingleCallActivityExecu
             // 异步业务流  一般不认为可以再次提交
             throw new ProcessException(ErrorEnum.COMMIT_FAILED, "异步子流程不可重复提交");
         }
-        String instanceDataId = serviceTaskExecutor.saveInstanceDataPO(runtimeContext);
-        runtimeContext.setInstanceDataId(instanceDataId);
+        // String instanceDataId = serviceTaskExecutor.saveInstanceDataPO(runtimeContext);
+        // runtimeContext.setInstanceDataId(instanceDataId);
     }
 
     @Override
     protected void startProcessCallActivity(RuntimeContext runtimeContext) throws ProcessException {
-        NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
+        // NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
         // 1.check reentrant execute
-        FlowInstanceMappingPO flowInstanceMappingPO = flowInstanceMappingDAO.selectFlowInstanceMappingPO(runtimeContext.getFlowInstanceId(), currentNodeInstance.getNodeInstanceId());
-        if (flowInstanceMappingPO != null) {
-            handleReentrantSubFlowInstance(runtimeContext, flowInstanceMappingPO);
-            return;
-        }
+        // FlowInstanceMappingPO flowInstanceMappingPO = flowInstanceMappingDAO.selectFlowInstanceMappingPO(runtimeContext.getFlowInstanceId(), currentNodeInstance.getNodeInstanceId());
+        // if (flowInstanceMappingPO != null) {
+        //     handleReentrantSubFlowInstance(runtimeContext, flowInstanceMappingPO);
+        //     return;
+        // }
         // 2.check CallActivity nested level
         preCheckCallActivityNestedLevel(runtimeContext);
 

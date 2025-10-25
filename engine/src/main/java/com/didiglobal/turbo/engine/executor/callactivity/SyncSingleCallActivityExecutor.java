@@ -67,6 +67,10 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         if (currentNodeInstance.getStatus() != NodeInstanceStatus.ACTIVE) {
             currentNodeInstance.setStatus(NodeInstanceStatus.ACTIVE);
         }
+        // 执行到用户输入环节，保存当前流程实例数据再退出
+        String instanceDataId = serviceTaskExecutor.saveInstanceDataPO(runtimeContext);
+        runtimeContext.setInstanceDataId(instanceDataId);
+        currentNodeInstance.setInstanceDataId(runtimeContext.getInstanceDataId());
         runtimeContext.getNodeInstanceList().add(currentNodeInstance);
 
         FlowElement flowElement = runtimeContext.getCurrentNodeModel();
@@ -93,8 +97,8 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         } else {
             commitCallActivity(runtimeContext);
         }
-        String instanceDataId = serviceTaskExecutor.saveInstanceDataPO(runtimeContext);
-        runtimeContext.setInstanceDataId(instanceDataId);
+        // String instanceDataId = serviceTaskExecutor.saveInstanceDataPO(runtimeContext);
+        // runtimeContext.setInstanceDataId(instanceDataId);
     }
 
     @Override

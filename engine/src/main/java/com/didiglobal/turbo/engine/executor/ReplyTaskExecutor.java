@@ -36,9 +36,9 @@ public class ReplyTaskExecutor extends ServiceTaskExecutor {
         JSONObject flowMap = (JSONObject) dataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
         flowMap.put(runtimeContext.getCurrentNodeInstance().getNodeKey(), nodeMap);
         // 数据持久化
-        if (MapUtils.isNotEmpty(dataMap)) {
-            String instanceDataId = saveInstanceDataPO(runtimeContext);
-            runtimeContext.setInstanceDataId(instanceDataId);
-        }
+        // if (MapUtils.isNotEmpty(dataMap)) {
+        //     String instanceDataId = saveInstanceDataPO(runtimeContext);
+        //     runtimeContext.setInstanceDataId(instanceDataId);
+        // }
     }
 }
