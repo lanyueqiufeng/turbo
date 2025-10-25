@@ -6,7 +6,6 @@ import com.didiglobal.turbo.engine.common.RuntimeContext;
 import com.didiglobal.turbo.engine.exception.ProcessException;
 import com.didiglobal.turbo.engine.model.InstanceData;
 import com.didiglobal.turbo.engine.spi.ReplyTaskExecuteService;
-import org.apache.commons.collections4.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -36,9 +35,9 @@ public class ReplyTaskExecutor extends ServiceTaskExecutor {
         JSONObject flowMap = (JSONObject) dataMap.get(ChatFlowConstant.InstanceKey.FLOW_MAP).getValue();
         flowMap.put(runtimeContext.getCurrentNodeInstance().getNodeKey(), nodeMap);
         // 数据持久化
-        if (MapUtils.isNotEmpty(dataMap)) {
-            String instanceDataId = saveInstanceDataPO(runtimeContext);
-            runtimeContext.setInstanceDataId(instanceDataId);
-        }
+        // if (MapUtils.isNotEmpty(dataMap)) {
+        //     String instanceDataId = saveInstanceDataPO(runtimeContext);
+        //     runtimeContext.setInstanceDataId(instanceDataId);
+        // }
     }
 }
