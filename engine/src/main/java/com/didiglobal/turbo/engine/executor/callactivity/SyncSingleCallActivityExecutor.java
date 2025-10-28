@@ -169,6 +169,7 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         long startTime = System.currentTimeMillis();
         String subFlowInstanceId = null;
         Exception exception = null;
+        LOGGER.info("子流程启动 ||启动入参={}", startProcessParam);
         try {
             startProcessResult = runtimeProcessor.startProcess(startProcessParam);
             subFlowInstanceId = startProcessResult.getFlowInstanceId();
@@ -178,7 +179,7 @@ public class SyncSingleCallActivityExecutor extends AbstractCallActivityExecutor
         }finally {
             subFlowStartService.invoke(runtimeContext, subStartInputParam, subFlowInstanceId, exception, startTime);
         }
-        LOGGER.info("子流程启动 ||启动入参={}||执行结果={}", startProcessParam, startProcessResult);
+        LOGGER.info("子流程启动 ||执行结果={}", startProcessResult);
         // 5.save flowInstance mapping
         saveFlowInstanceMapping(runtimeContext, startProcessResult.getFlowInstanceId());
         handleCallActivityResult(runtimeContext, startProcessResult);
