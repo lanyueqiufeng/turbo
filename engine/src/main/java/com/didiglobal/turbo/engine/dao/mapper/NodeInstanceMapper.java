@@ -48,4 +48,7 @@ public interface NodeInstanceMapper extends BaseMapper<NodeInstancePO> {
 
     @Select("SELECT * FROM ei_node_instance WHERE flow_instance_id=#{flowInstanceId} AND node_key=#{nodeKey}")
     List<NodeInstancePO> selectByFlowInstanceIdAndNodeKey(@Param("flowInstanceId") String flowInstanceId,  @Param("nodeKey") String nodeKey);
+
+    @Update("UPDATE ei_node_instance SET id =#{id}  WHERE id=#{id}")
+    void updateByIdCustom(NodeInstancePO entity);
 }

@@ -12,6 +12,7 @@ import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
 import com.didiglobal.turbo.engine.spi.ServiceTaskExecuteService;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
+import org.apache.commons.collections4.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -89,7 +90,7 @@ public class ServiceTaskExecutor extends ElementExecutor {
      * @throws Exception
      */
     @Override
-    protected RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
+    public RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
         Map<String, FlowElement> flowElementMap = runtimeContext.getFlowElementMap();
         FlowElement currentFlowElement = runtimeContext.getCurrentNodeModel();
 

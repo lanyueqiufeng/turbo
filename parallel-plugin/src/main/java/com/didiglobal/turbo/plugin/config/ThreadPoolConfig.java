@@ -11,7 +11,7 @@ public class ThreadPoolConfig {
 
     private static final String TIMEOUT_CONFIG = "turbo.plugin.parallelGateway.threadPool.timeout";
 
-    @Bean
+//    @Bean
     public AsynTaskExecutor executorService(){
         String timeout = PluginPropertiesUtil.getPropertyValue(TIMEOUT_CONFIG);
         AsynTaskExecutor taskExecutor = new AsynTaskExecutor();

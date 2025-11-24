@@ -100,7 +100,7 @@ public abstract class ElementExecutor extends RuntimeExecutor {
     }
 
     @Override
-    protected RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
+    public RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
         Map<String, FlowElement> flowElementMap = runtimeContext.getFlowElementMap();
         FlowElement flowElement = getUniqueNextNode(runtimeContext.getCurrentNodeModel(), flowElementMap);
         runtimeContext.setCurrentNodeModel(flowElement);

@@ -1,32 +1,22 @@
 package com.didiglobal.turbo.plugin.executor;
 
-import com.didiglobal.turbo.engine.common.ErrorEnum;
-import com.didiglobal.turbo.engine.common.ExtendRuntimeContext;
-import com.didiglobal.turbo.engine.common.FlowInstanceStatus;
-import com.didiglobal.turbo.engine.common.ProcessStatus;
-import com.didiglobal.turbo.engine.entity.NodeInstanceLogPO;
-import com.didiglobal.turbo.engine.exception.SuspendException;
-import com.didiglobal.turbo.plugin.InclusiveGatewayElementPlugin;
-import com.didiglobal.turbo.plugin.ParallelGatewayElementPlugin;
-import com.didiglobal.turbo.plugin.common.Constants;
-import com.didiglobal.turbo.plugin.common.ParallelErrorEnum;
-import com.didiglobal.turbo.plugin.common.ParallelNodeInstanceStatus;
-import com.didiglobal.turbo.plugin.common.MergeStrategy;
-import com.didiglobal.turbo.plugin.common.ParallelRuntimeContext;
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
-import com.didiglobal.turbo.engine.common.InstanceDataType;
-import com.didiglobal.turbo.engine.common.NodeInstanceStatus;
-import com.didiglobal.turbo.engine.common.NodeInstanceType;
-import com.didiglobal.turbo.engine.common.RuntimeContext;
+import com.didiglobal.turbo.engine.common.*;
 import com.didiglobal.turbo.engine.entity.InstanceDataPO;
+import com.didiglobal.turbo.engine.entity.NodeInstanceLogPO;
 import com.didiglobal.turbo.engine.entity.NodeInstancePO;
 import com.didiglobal.turbo.engine.exception.ProcessException;
+import com.didiglobal.turbo.engine.exception.SuspendException;
 import com.didiglobal.turbo.engine.executor.ElementExecutor;
 import com.didiglobal.turbo.engine.executor.RuntimeExecutor;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
+import com.didiglobal.turbo.plugin.InclusiveGatewayElementPlugin;
+import com.didiglobal.turbo.plugin.ParallelGatewayElementPlugin;
+import com.didiglobal.turbo.plugin.common.Constants;
+import com.didiglobal.turbo.plugin.common.*;
 import com.didiglobal.turbo.plugin.service.ParallelNodeInstanceService;
 import com.didiglobal.turbo.plugin.util.ExecutorUtil;
 import com.google.common.collect.Lists;
@@ -35,25 +25,20 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import javax.annotation.Resource;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("unchecked")
@@ -61,8 +46,14 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractGatewayExecutor.class);
 
+    private final Lock lock = new ReentrantLock();
+
+    @Resource(name = "agentThreadPoolTaskExecutor")
+    @Lazy
+    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+
     @Resource
-    protected AsynTaskExecutor asynTaskExecutor;
+    private RedissonClient redissonClient;
 
     @Resource
     private MergeStrategyFactory mergeStrategyFactory;
@@ -115,7 +106,6 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
         Pair<String, String> forkAndJoinNodeKey = ExecutorUtil.getForkAndJoinNodeKey(currentNodeModel);
         String flowInstanceId = runtimeContext.getFlowInstanceId();
         NodeInstanceBO currentNodeInstance = runtimeContext.getCurrentNodeInstance();
-
         // save and clear node instance list before execute.
         saveAndClearNodeInstanceList(runtimeContext);
 
@@ -127,8 +117,24 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
             List<RuntimeExecutor> executeExecutors = getExecuteExecutors(runtimeContext);
             doExecuteByAsyn(runtimeContext, executeExecutors);
         } else if (ExecutorUtil.isJoin(currentNodeModel.getKey(), forkAndJoinNodeKey)) {
-            // join
-            joinNodeHandle(runtimeContext, currentNodeModel, forkAndJoinNodeKey.getLeft(), flowInstanceId, currentNodeInstance);
+            String key = runtimeContext.getFlowInstanceId() + forkAndJoinNodeKey.getRight();
+            RLock rLock = redissonClient.getLock(key);
+            try {
+                if (rLock.tryLock(10, 30, TimeUnit.SECONDS)) {
+                    try {
+                        joinNodeHandle(runtimeContext, currentNodeModel,
+                                forkAndJoinNodeKey.getLeft(), flowInstanceId,
+                                currentNodeInstance);
+                    } finally {
+                        rLock.unlock();
+                        LOGGER.info("解锁成功");
+                    }
+                } else {
+                    LOGGER.error("竞争锁时间过长,发布失败");
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException("获取锁失败", e);
+            }
         } else {
             LOGGER.error("Missing required element attributes: forkJoinMatch[fork,join]");
             throw new ProcessException(ParallelErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES.getErrNo(), ParallelErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES.getErrMsg());
@@ -136,44 +142,68 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
     }
 
     private void doExecuteByAsyn(RuntimeContext runtimeContext, List<RuntimeExecutor> runtimeExecutors) {
-        List<RuntimeContext> contextList = Lists.newArrayList();
-        CompletionService<RuntimeContext> completionService = new ExecutorCompletionService<>(asynTaskExecutor);
-
+        ConcurrentMap<Future<RuntimeContext>, RuntimeContext> futureToContext = new ConcurrentHashMap<>();
+        CompletionService<RuntimeContext> completionService = new ExecutorCompletionService<>(threadPoolTaskExecutor);
         AtomicInteger processStatus = new AtomicInteger(ProcessStatus.SUCCESS);
+
         String parentExecuteIdStr = ExecutorUtil.getParentExecuteId((String) runtimeContext.getExtendProperties().getOrDefault("executeId", ""));
         List<String> executeIds = new ArrayList<>(ExecutorUtil.getExecuteIdSet((String) runtimeContext.getExtendProperties().get("executeId")));
         runtimeContext.getExtendProperties().put("executeId", null);
+
         for (int i = 0; i < runtimeExecutors.size(); i++) {
             RuntimeExecutor executor = runtimeExecutors.get(i);
             RuntimeContext rc = cloneRuntimeContext(runtimeContext, parentExecuteIdStr, executeIds, i);
-            contextList.add(rc);
-            completionService.submit(() -> asynExecute(processStatus, executor, rc));
+            Future<RuntimeContext> future = completionService.submit(() -> asynExecute(processStatus, executor, rc));
+            futureToContext.put(future, rc);
         }
-
-        // execute result handle
-        asynExecuteResultHandle(runtimeContext, contextList, completionService, executeIds, asynTaskExecutor.getTimeout());
+        //  timeout 毫秒，这里示例 0 表示不超时，同时合并数据回到主分支
+        asynExecuteResultHandle(runtimeContext, futureToContext, completionService, executeIds, 0L);
     }
 
-    private void asynExecuteResultHandle(RuntimeContext runtimeContext, List<RuntimeContext> contextList, CompletionService<RuntimeContext> completionService, List<String> executeIds, long timeout) {
-        // system exception, execution exception, suspend exception
+    private void asynExecuteResultHandle(RuntimeContext runtimeContext,
+                                         Map<Future<RuntimeContext>, RuntimeContext> futureToContext,
+                                         CompletionService<RuntimeContext> completionService,
+                                         List<String> executeIds,
+                                         long timeout) {
+
         Map<String, ProcessException> em = new HashMap<>();
         String systemErrorNodeKey = null;
         String processExceptionNodeKey = null;
         String suspendExceptionNodeKey = null;
-        List<ParallelRuntimeContext> parallelRuntimeContextList = (List<ParallelRuntimeContext>) runtimeContext.getExtendProperties().getOrDefault("parallelRuntimeContextList", new ArrayList<ParallelRuntimeContext>());
+
+        // 获取或初始化 parallelRuntimeContextList
+        List<ParallelRuntimeContext> parallelRuntimeContextList =
+                (List<ParallelRuntimeContext>) runtimeContext.getExtendProperties()
+                        .computeIfAbsent("parallelRuntimeContextList", k -> new ArrayList<>());
         parallelRuntimeContextList.clear();
-        for (RuntimeContext context : contextList) {
+
+        int taskCount = futureToContext.size();
+
+        for (int i = 0; i < taskCount; i++) {
             ParallelRuntimeContext prc = new ParallelRuntimeContext();
+            Future<RuntimeContext> future = null;
+            RuntimeContext context = null;
             try {
-                Future<RuntimeContext> future;
+                // 取下一个完成的 Future
                 if (timeout > 0) {
                     future = getResultWithTimeout(completionService, timeout);
                 } else {
                     future = completionService.take();
                 }
-                parallelRuntimeContextList.add(prc);
+                // 一定要在这里 remove，保证不会重复获取
+                context = futureToContext.remove(future);
+                if (context == null) {
+                    LOGGER.warn("RuntimeContext is null for future {}", future);
+                    continue; // 安全兜底
+                }
+                // 捕获任务执行结果，如果正常完成，不会影响 context
                 future.get();
+                runtimeContext.setSuspendNodeInstance(context.getCurrentNodeInstance());
+                runtimeContext.setCurrentNodeInstance(context.getCurrentNodeInstance());
             } catch (ExecutionException e) {
+                if (null == context) {
+                    context = futureToContext.get(future); // 兜底
+                }
                 Throwable cause = e.getCause();
                 if (cause instanceof SuspendException) {
                     SuspendException exception = (SuspendException) cause;
@@ -183,7 +213,7 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
                 } else if (cause instanceof ProcessException) {
                     ProcessException exception = (ProcessException) cause;
                     processExceptionNodeKey = context.getSuspendNodeInstance().getNodeKey();
-                    em.put(processExceptionNodeKey, (ProcessException) cause);
+                    em.put(processExceptionNodeKey, exception);
                     prc.setException(exception);
                 } else {
                     LOGGER.error("parallel process exception", e);
@@ -194,28 +224,48 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
                 }
             } catch (Exception e) {
                 LOGGER.error("parallel process exception", e);
-                systemErrorNodeKey = context.getSuspendNodeInstance().getNodeKey();
-                ProcessException exception = new ProcessException(ErrorEnum.SYSTEM_ERROR);
-                em.put(systemErrorNodeKey, exception);
-                prc.setException(exception);
+                if (null == context) {
+                    context = futureToContext.get(future); // 兜底
+                }
+                if (context != null) {
+                    systemErrorNodeKey = context.getSuspendNodeInstance().getNodeKey();
+                    ProcessException exception = new ProcessException(ErrorEnum.SYSTEM_ERROR);
+                    em.put(systemErrorNodeKey, exception);
+                    prc.setException(exception);
+                }
             } finally {
-                prc.setExecuteId((String) context.getExtendProperties().get("executeId"));
-                prc.setBranchExecuteDataMap(context.getInstanceDataMap());
-                prc.setBranchSuspendNodeInstance(context.getSuspendNodeInstance());
+                if (context != null) {
+                    prc.setExecuteId((String) context.getExtendProperties().get("executeId"));
+                    prc.setBranchExecuteDataMap(context.getInstanceDataMap());
+                    prc.setBranchSuspendNodeInstance(context.getSuspendNodeInstance());
+                    List<ExtendRuntimeContext> extendRuntimeContextList = context.getExtendRuntimeContextList();
+                    if (null != extendRuntimeContextList && !extendRuntimeContextList.isEmpty()) {
+                        List<ExtendRuntimeContext> collect = extendRuntimeContextList.stream().filter(
+                                j -> {
+                                    return null == j.getException() || j.getException().getErrNo() != 1601;
+                                }).collect(Collectors.toList());
+                        if (null != collect && !collect.isEmpty()) {
+                            prc.setBranchSuspendNodeInstance(collect.get(0).getBranchSuspendNodeInstance());
+                        }
+                    }
+                    parallelRuntimeContextList.add(prc);
+                }
             }
         }
-
-        //  fixme optimize
-        if (null != systemErrorNodeKey) {
+        // 异常统一处理
+        if (systemErrorNodeKey != null) {
             parallelNodeInstanceService.closeParallelSuspendUserTask(runtimeContext, executeIds);
             throw em.get(systemErrorNodeKey);
         }
-        if (null != processExceptionNodeKey) {
+        if (processExceptionNodeKey != null) {
             parallelNodeInstanceService.closeParallelSuspendUserTask(runtimeContext, executeIds);
             throw em.get(processExceptionNodeKey);
         }
-        throw em.get(suspendExceptionNodeKey);
+        if (suspendExceptionNodeKey != null) {
+            throw em.get(suspendExceptionNodeKey);
+        }
     }
+
 
     private Future<RuntimeContext> getResultWithTimeout(CompletionService<RuntimeContext> completionService, long timeout) {
         try {
@@ -259,23 +309,23 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
         // 2.save nodeInstanceList to db
         saveNodeInstanceList(runtimeContext);
 
-        // 3.update flowInstance status while completed
-        if (isCompleted(runtimeContext)) {
-            if (isSubFlowInstance(runtimeContext)) {
-                processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.END);
-                runtimeContext.setFlowInstanceStatus(FlowInstanceStatus.END);
-            } else {
-                processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.COMPLETED);
-                runtimeContext.setFlowInstanceStatus(FlowInstanceStatus.COMPLETED);
-            }
-            LOGGER.info("postExecute: flowInstance process completely.||flowInstanceId={}", runtimeContext.getFlowInstanceId());
-        }
+//        // 3.update flowInstance status while completed
+//        if (isCompleted(runtimeContext)) {
+//            if (isSubFlowInstance(runtimeContext)) {
+//                processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.END);
+//                runtimeContext.setFlowInstanceStatus(FlowInstanceStatus.END);
+//            } else {
+//                processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.COMPLETED);
+//                runtimeContext.setFlowInstanceStatus(FlowInstanceStatus.COMPLETED);
+//            }
+//            LOGGER.info("postExecute: flowInstance process completely.||flowInstanceId={}", runtimeContext.getFlowInstanceId());
+//        }
     }
 
     private void doParallelExecute(RuntimeContext runtimeContext, RuntimeExecutor runtimeExecutor) throws ProcessException {
         while (runtimeExecutor != null) {
             runtimeExecutor.execute(runtimeContext);
-            runtimeExecutor = super.getExecuteExecutor(runtimeContext);
+            runtimeExecutor = runtimeExecutor.getExecuteExecutor(runtimeContext);
         }
     }
 
@@ -513,10 +563,16 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
         if (null == nodeInstancePO.getCreateTime()) {
             nodeInstancePO.setCreateTime(currentTime);
         }
-        if (null != runtimeContext.getExtendProperties()
-            && runtimeContext.getExtendProperties().containsKey("parallelRuntimeContextList")
-            && !((List<ParallelRuntimeContext>) runtimeContext.getExtendProperties().get("parallelRuntimeContextList")).isEmpty()) {
-            nodeInstancePO.put("executeId", ((List<ParallelRuntimeContext>) runtimeContext.getExtendProperties().get("parallelRuntimeContextList")).get(0).getExecuteId());
+        // 如果有分支，分别拿到分支的executeId 插入数据库
+        // parallelRuntimeContextList  存放多个并行分支的运行上下文对象列表
+        // ParallelRuntimeContext	   表示单个并行分支的运行环境（包括 executeId、变量、副本节点等）
+        if (null != runtimeContext.getExtendProperties() && runtimeContext.getExtendProperties().containsKey("parallelRuntimeContextList")) {
+            if (runtimeContext.getExtendProperties().get("parallelRuntimeContextList") != null && !((List<ParallelRuntimeContext>) runtimeContext.getExtendProperties().get(
+                    "parallelRuntimeContextList")).isEmpty()) {
+                nodeInstancePO.put("executeId",
+                        ((List<ParallelRuntimeContext>) runtimeContext.getExtendProperties().get(
+                                "parallelRuntimeContextList")).get(0).getExecuteId());
+            }
         }
         nodeInstancePO.setModifyTime(currentTime);
         return nodeInstancePO;

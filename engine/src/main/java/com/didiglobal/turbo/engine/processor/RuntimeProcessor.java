@@ -62,12 +62,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 
 @Component
 public class RuntimeProcessor {
@@ -194,7 +189,6 @@ public class RuntimeProcessor {
 
             //2.get flowInstance
             FlowInstanceBO flowInstanceBO = getFlowInstanceBO(commitTaskParam.getFlowInstanceId());
-
             //3.check status
             if (flowInstanceBO.getStatus() == FlowInstanceStatus.TERMINATED) {
                 LOGGER.warn("commit failed: flowInstance has been completed.||commitTaskParam={}", commitTaskParam);
@@ -747,35 +741,50 @@ public class RuntimeProcessor {
         return fillRuntimeResult(runtimeResult, runtimeContext, e.getErrNo(), e.getErrMsg());
     }
 
-    private RuntimeResult fillRuntimeResult(RuntimeResult runtimeResult, RuntimeContext runtimeContext, int errNo, String errMsg) {
-        runtimeResult.setErrCode(errNo);
-        runtimeResult.setErrMsg(errMsg);
-
-        if (runtimeContext != null) {
-            runtimeResult.setFlowInstanceId(runtimeContext.getFlowInstanceId());
-            runtimeResult.setStatus(runtimeContext.getFlowInstanceStatus());
-            List<RuntimeResult.NodeExecuteResult> nodeExecuteResults = Lists.newArrayList();
-
-            if (null != runtimeContext.getExtendRuntimeContextList() && !runtimeContext.getExtendRuntimeContextList().isEmpty()) {
-                for (ExtendRuntimeContext extendRuntimeContext : runtimeContext.getExtendRuntimeContextList()) {
-                    RuntimeResult.NodeExecuteResult result = new RuntimeResult.NodeExecuteResult();
-                    result.setActiveTaskInstance(buildActiveTaskInstance(extendRuntimeContext.getBranchSuspendNodeInstance(), runtimeContext));
-                    result.setVariables(InstanceDataUtil.getInstanceDataList(extendRuntimeContext.getBranchExecuteDataMap()));
-                    result.setErrCode(extendRuntimeContext.getException().getErrNo());
-                    result.setErrMsg(extendRuntimeContext.getException().getErrMsg());
-                    nodeExecuteResults.add(result);
+private RuntimeResult fillRuntimeResult(RuntimeResult runtimeResult, RuntimeContext runtimeContext, int errNo, String errMsg) {
+    runtimeResult.setErrCode(errNo);
+    runtimeResult.setErrMsg(errMsg);
+    if (runtimeContext != null) {
+        runtimeResult.setFlowInstanceId(runtimeContext.getFlowInstanceId());
+        runtimeResult.setStatus(runtimeContext.getFlowInstanceStatus());
+        List<RuntimeResult.NodeExecuteResult> nodeExecuteResults = Lists.newArrayList();
+        if (null != runtimeContext.getExtendRuntimeContextList() && !runtimeContext.getExtendRuntimeContextList().isEmpty()) {
+            //移除 1601的异常
+            List<ExtendRuntimeContext> runtimeCopy = new ArrayList<>();
+            for (ExtendRuntimeContext extendRuntimeContextadd : runtimeContext.getExtendRuntimeContextList()) {
+                TurboException exception = extendRuntimeContextadd.getException();
+                if (null != exception && exception.getErrNo() == 1601) {
+                    continue;
                 }
-            } else {
-                RuntimeResult.NodeExecuteResult result = new RuntimeResult.NodeExecuteResult();
-                result.setActiveTaskInstance(buildActiveTaskInstance(runtimeContext.getSuspendNodeInstance(), runtimeContext));
-                result.setVariables(InstanceDataUtil.getInstanceDataList(runtimeContext.getInstanceDataMap()));
-                nodeExecuteResults.add(result);
+                runtimeCopy.add(extendRuntimeContextadd);
+            }
+            if (!runtimeCopy.isEmpty()) {
+                runtimeContext.setExtendRuntimeContextList(runtimeCopy);
             }
 
-            runtimeResult.setNodeExecuteResults(nodeExecuteResults);
+            for (ExtendRuntimeContext extendRuntimeContext : runtimeContext.getExtendRuntimeContextList()) {
+                RuntimeResult.NodeExecuteResult result = new RuntimeResult.NodeExecuteResult();
+                result.setActiveTaskInstance(
+                        buildActiveTaskInstance(extendRuntimeContext.getBranchSuspendNodeInstance(),
+                                runtimeContext));
+                result.setVariables(
+                        InstanceDataUtil.getInstanceDataList(extendRuntimeContext.getBranchExecuteDataMap()));
+                if (null != extendRuntimeContext.getException()) {
+                    result.setErrCode(extendRuntimeContext.getException().getErrNo());
+                    result.setErrMsg(extendRuntimeContext.getException().getErrMsg());
+                }
+                nodeExecuteResults.add(result);
+            }
+        } else {
+            RuntimeResult.NodeExecuteResult result = new RuntimeResult.NodeExecuteResult();
+            result.setActiveTaskInstance(buildActiveTaskInstance(runtimeContext.getSuspendNodeInstance(), runtimeContext));
+            result.setVariables(InstanceDataUtil.getInstanceDataList(runtimeContext.getInstanceDataMap()));
+            nodeExecuteResults.add(result);
         }
-        return runtimeResult;
+        runtimeResult.setNodeExecuteResults(nodeExecuteResults);
     }
+    return runtimeResult;
+}
 
     private NodeInstance buildActiveTaskInstance(NodeInstanceBO nodeInstanceBO, RuntimeContext runtimeContext) {
         NodeInstance activeNodeInstance = new NodeInstance();

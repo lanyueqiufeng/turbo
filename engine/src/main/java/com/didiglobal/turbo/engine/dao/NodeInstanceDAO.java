@@ -143,4 +143,8 @@ public class NodeInstanceDAO extends BaseDAO<NodeInstanceMapper, NodeInstancePO>
     public List<NodeInstancePO> selectByFlowInstanceIdAndNodeKey(String flowInstanceId, String nodeKey) {
         return baseMapper.selectByFlowInstanceIdAndNodeKey(flowInstanceId, nodeKey);
     }
+
+    public void updateByIdCustom(NodeInstancePO joinNodeInstancePo) {
+        baseMapper.updateByIdCustom(joinNodeInstancePo);
+    }
 }

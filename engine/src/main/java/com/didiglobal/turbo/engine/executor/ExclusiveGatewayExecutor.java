@@ -131,7 +131,7 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
      * @throws Exception
      */
     @Override
-    protected RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
+    public RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
         FlowElement nextNode = null;
         Exception exception = null;
         FlowElement currentNodeModel = runtimeContext.getCurrentNodeModel();

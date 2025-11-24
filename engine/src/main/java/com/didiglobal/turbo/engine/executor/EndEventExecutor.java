@@ -67,7 +67,7 @@ public class EndEventExecutor extends ElementExecutor {
     }
 
     @Override
-    protected RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
+    public RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
         LOGGER.info("getExecuteExecutor: no executor after EndEvent.");
         return null;
     }

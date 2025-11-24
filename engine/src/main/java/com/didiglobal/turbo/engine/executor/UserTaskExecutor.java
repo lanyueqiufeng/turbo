@@ -163,7 +163,7 @@ public class UserTaskExecutor extends ElementExecutor {
      * @throws Exception
      */
     @Override
-    protected RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
+    public RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
         FlowElement currentFlowElement = runtimeContext.getCurrentNodeModel();
         Map<String, FlowElement> flowElementMap = runtimeContext.getFlowElementMap();
 

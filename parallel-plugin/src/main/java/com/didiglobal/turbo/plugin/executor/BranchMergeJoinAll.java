@@ -45,6 +45,7 @@ public class BranchMergeJoinAll extends BranchMergeStrategy {
                        String parentExecuteId, String currentExecuteId, DataMergeStrategy dataMergeStrategy, InstanceDataPO instanceDataPo, int status) {
         InstanceDataPO mergePo = dataMergeStrategy.merge(runtimeContext, forkInstanceData, instanceDataPo);
         instanceDataDAO.insertOrUpdate(mergePo);
+        currentNodeInstance.setInstanceDataId(mergePo.getInstanceDataId());
         currentNodeInstance.setStatus(status);
         currentNodeInstance.put("executeId", ExecutorUtil.genExecuteIdWithParent(parentExecuteId, currentExecuteId));
         NodeInstancePO joinPo = buildNodeInstancePO(runtimeContext, currentNodeInstance);
@@ -57,40 +58,51 @@ public class BranchMergeJoinAll extends BranchMergeStrategy {
                           String parentExecuteId, String currentExecuteId, Set<String> allExecuteIdSet, DataMergeStrategy dataMergeStrategy) {
         Set<String> arrivedExecuteIds = ExecutorUtil.getExecuteIdSet((String) joinNodeInstancePo.get("executeId"));
         arrivedExecuteIds.add(currentExecuteId);
-        InstanceDataPO joinInstanceData = instanceDataDAO.select(runtimeContext.getFlowInstanceId(), runtimeContext.getInstanceDataId());
-        String instanceDataId = joinInstanceData.getInstanceDataId();
-        if (ExecutorUtil.allArrived(allExecuteIdSet, arrivedExecuteIds)) {
-            // All arrived
-            InstanceDataPO mergePo = dataMergeStrategy.merge(runtimeContext, null, joinInstanceData);
-            if ((mergePo.getId() == null || StringUtils.isBlank(instanceDataId)) && isNotEmpty(mergePo.getInstanceData())) {
-                instanceDataId = genId();
-                joinNodeInstancePo.setInstanceDataId(instanceDataId);
-                fillMergePo(runtimeContext, mergePo, instanceDataId);
-                instanceDataDAO.insert(mergePo);
-            } else {
-                if(StringUtils.isNotBlank(instanceDataId)){
-                    instanceDataDAO.updateData(mergePo);
-                }else {
-                    LOGGER.warn("There is no data to be merged.");
-                }
-            }
-            buildParallelNodeInstancePo(joinNodeInstancePo, currentNodeInstance, NodeInstanceStatus.COMPLETED);
-            nodeInstanceDAO.updateById(joinNodeInstancePo);
-            nodeInstanceLogDAO.insert(buildCurrentNodeInstanceLogPO(currentNodeInstance, currentExecuteId, joinNodeInstancePo));
-        } else {
-            // Not all arrived
-            InstanceDataPO mergePo = dataMergeStrategy.merge(runtimeContext, null, joinInstanceData);
-            if(StringUtils.isNotBlank(instanceDataId)) {
-                instanceDataDAO.updateData(mergePo);
-            }
-            buildParallelNodeInstancePo(joinNodeInstancePo, currentNodeInstance, ParallelNodeInstanceStatus.WAITING);
-            nodeInstanceDAO.updateById(joinNodeInstancePo);
-            nodeInstanceLogDAO.insert(buildNodeInstanceLogPO(joinNodeInstancePo));
+        // 1. 获取当前分支数据
+        InstanceDataPO joinInstanceData = instanceDataDAO.select(runtimeContext.getFlowInstanceId(),
+                runtimeContext.getInstanceDataId());
 
-            throw new SuspendException(ParallelErrorEnum.WAITING_SUSPEND.getErrNo(), MessageFormat.format(Constants.NODE_INSTANCE_FORMAT,
-                    runtimeContext.getCurrentNodeModel().getKey(),
-                    runtimeContext.getCurrentNodeModel().getProperties().getOrDefault(Constants.ELEMENT_PROPERTIES.NAME, StringUtils.EMPTY),
-                    currentNodeInstance.getNodeInstanceId()));
+        // 2. 获取已合并的数据（之前所有分支的合并结果）  joinNodeInstancePo  汇聚节点
+        InstanceDataPO mergedData = instanceDataDAO.select(runtimeContext.getFlowInstanceId(),
+                joinNodeInstancePo.getInstanceDataId());
+        if (mergedData == null) {
+            mergedData = new InstanceDataPO();
+            mergedData.setInstanceDataId(genId());
+            joinNodeInstancePo.setInstanceDataId(mergedData.getInstanceDataId());
+        }
+
+        // 3. 合并数据
+        InstanceDataPO mergePo = dataMergeStrategy.merge(runtimeContext, mergedData, joinInstanceData);
+
+        // 4. 根据是否所有分支都到达，决定完成还是等待 allExecuteIdSet全部分支   arrivedExecuteIds 到达的分支
+        boolean allArrived = ExecutorUtil.allArrived(allExecuteIdSet, arrivedExecuteIds);
+        int status = allArrived ? NodeInstanceStatus.COMPLETED : ParallelNodeInstanceStatus.WAITING;
+
+//        // 5. 保存合并后的数据
+//        if (StringUtils.isBlank(mergedData.getInstanceDataId())) {
+//            instanceDataDAO.insert(mergePo);
+//        } else {
+//            instanceDataDAO.updateData(mergePo);
+//        }
+//        //跟新汇聚节点数据
+//        instanceDataDAO.updateData(mergedData);
+
+        // 6. 更新节点实例状态
+        buildParallelNodeInstancePo(joinNodeInstancePo, currentNodeInstance, status);
+        nodeInstanceDAO.updateById(joinNodeInstancePo);
+        nodeInstanceDAO.updateByIdCustom(joinNodeInstancePo);
+        nodeInstanceLogDAO.insert(allArrived ?
+                buildCurrentNodeInstanceLogPO(currentNodeInstance, currentExecuteId, joinNodeInstancePo) :
+                buildNodeInstanceLogPO(joinNodeInstancePo));
+
+        // 7. 如果不是所有分支都到达，则挂起
+        if (!allArrived) {
+            throw new SuspendException(ParallelErrorEnum.WAITING_SUSPEND.getErrNo(),
+                    MessageFormat.format(Constants.NODE_INSTANCE_FORMAT,
+                            runtimeContext.getCurrentNodeModel().getKey(),
+                            runtimeContext.getCurrentNodeModel().getProperties().getOrDefault(
+                                    Constants.ELEMENT_PROPERTIES.NAME, StringUtils.EMPTY),
+                            currentNodeInstance.getNodeInstanceId()));
         }
     }
 

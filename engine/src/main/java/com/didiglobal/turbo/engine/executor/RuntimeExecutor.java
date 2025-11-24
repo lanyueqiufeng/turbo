@@ -69,7 +69,7 @@ public abstract class RuntimeExecutor {
         return runtimeContext.getParentRuntimeContext() != null;
     }
 
-    protected abstract RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException;
+    public abstract RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException;
 
     protected abstract RuntimeExecutor getRollbackExecutor(RuntimeContext runtimeContext) throws ProcessException;
 }

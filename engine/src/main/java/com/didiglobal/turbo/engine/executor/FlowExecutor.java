@@ -64,11 +64,17 @@ public class FlowExecutor extends RuntimeExecutor {
             preExecute(runtimeContext);
             doExecute(runtimeContext);
         } catch (ProcessException pe) {
-            if (!ErrorEnum.isSuccess(pe.getErrNo())) {
-                processStatus = ProcessStatus.FAILED;
-                processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
+            // 网关中断异常只结束循环，不继续抛出
+            if (1601 == pe.getErrNo()) {
+                LOGGER.info("忽略jion合并等待异常");
+                processStatus = ProcessStatus.SUCCESS;
+            } else {
+                if (!ErrorEnum.isSuccess(pe.getErrNo())) {
+                    processStatus = ProcessStatus.FAILED;
+                    processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
+                }
+                throw pe;
             }
-            throw pe;
         } catch (Exception e) {
             processInstanceDAO.updateErrorMsg(runtimeContext.getFlowInstanceId(), e);
             throw e;
@@ -239,10 +245,11 @@ public class FlowExecutor extends RuntimeExecutor {
 
     private void doExecute(RuntimeContext runtimeContext) throws ProcessException {
         RuntimeExecutor runtimeExecutor = getExecuteExecutor(runtimeContext);
-        while (runtimeExecutor != null) {
-            runtimeExecutor.execute(runtimeContext);
-            runtimeExecutor = runtimeExecutor.getExecuteExecutor(runtimeContext);
-        }
+           // 循环找到流程节点实例
+           while (runtimeExecutor != null) {
+               runtimeExecutor.execute(runtimeContext);
+               runtimeExecutor = runtimeExecutor.getExecuteExecutor(runtimeContext);
+           }
     }
 
     private void postExecute(RuntimeContext runtimeContext) throws ProcessException {
@@ -635,7 +642,7 @@ public class FlowExecutor extends RuntimeExecutor {
     }
 
     @Override
-    protected RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
+    public RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
         return getElementExecutor(runtimeContext);
     }
 
