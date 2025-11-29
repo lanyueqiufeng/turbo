@@ -29,8 +29,9 @@ public class StartEventExecutor extends ElementExecutor {
     protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {
         if (startEventExecuteService != null) {
             startEventExecuteService.invoke(runtimeContext);
-            String instanceDataId = serviceTaskExecutor.saveInstanceDataPO(runtimeContext);
-            runtimeContext.setInstanceDataId(instanceDataId); }
+            // String instanceDataId = serviceTaskExecutor.saveInstanceDataPO(runtimeContext);
+            // runtimeContext.setInstanceDataId(instanceDataId);
+        }
     }
 
     @Override

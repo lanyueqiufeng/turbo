@@ -1,6 +1,5 @@
 package com.didiglobal.turbo.engine.executor;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
@@ -15,7 +14,6 @@ import com.didiglobal.turbo.engine.spi.HookService;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
 import com.google.common.collect.Lists;
-import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,32 +51,32 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
     @Override
     protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {
         // 1.get hook param
-        FlowElement flowElement = runtimeContext.getCurrentNodeModel();
-        String hookInfoParam = FlowModelUtil.getHookInfos(flowElement);
+        // FlowElement flowElement = runtimeContext.getCurrentNodeModel();
+        // String hookInfoParam = FlowModelUtil.getHookInfos(flowElement);
 
         // 2.ignore while properties is empty
-        if (StringUtils.isBlank(hookInfoParam)) {
-            return;
-        }
+        // if (StringUtils.isBlank(hookInfoParam)) {
+        //     return;
+        // }
 
         // 3.invoke hook and get data result
-        Map<String, InstanceData> hookInfoValueMap = getHookInfoValueMap(runtimeContext);
-        LOGGER.info("doExecute getHookInfoValueMap.||hookInfoValueMap={}", hookInfoValueMap);
-        if (MapUtils.isEmpty(hookInfoValueMap)) {
-            LOGGER.warn("doExecute: hookInfoValueMap is empty.||flowInstanceId={}||hookInfoParam={}||nodeKey={}",
-                    runtimeContext.getFlowInstanceId(), hookInfoParam, flowElement.getKey());
-            return;
-        }
+        // Map<String, InstanceData> hookInfoValueMap = getHookInfoValueMap(runtimeContext);
+        // LOGGER.info("doExecute getHookInfoValueMap.||hookInfoValueMap={}", hookInfoValueMap);
+        // if (MapUtils.isEmpty(hookInfoValueMap)) {
+        //     LOGGER.warn("doExecute: hookInfoValueMap is empty.||flowInstanceId={}||hookInfoParam={}||nodeKey={}",
+        //             runtimeContext.getFlowInstanceId(), hookInfoParam, flowElement.getKey());
+        //     return;
+        // }
+        //
+        // // 4.merge data to current dataMap
+        // Map<String, InstanceData> dataMap = runtimeContext.getInstanceDataMap();
+        // dataMap.putAll(hookInfoValueMap);
 
-        // 4.merge data to current dataMap
-        Map<String, InstanceData> dataMap = runtimeContext.getInstanceDataMap();
-        dataMap.putAll(hookInfoValueMap);
-
-        // 5.save data
-        if (MapUtils.isNotEmpty(dataMap)) {
-            String instanceDataId = saveInstanceDataPO(runtimeContext);
-            runtimeContext.setInstanceDataId(instanceDataId);
-        }
+        // // 5.save data
+        // if (MapUtils.isNotEmpty(dataMap)) {
+        //     String instanceDataId = saveInstanceDataPO(runtimeContext);
+        //     runtimeContext.setInstanceDataId(instanceDataId);
+        // }
     }
 
     private Map<String, InstanceData> getHookInfoValueMap(RuntimeContext runtimeContext) {
@@ -95,12 +93,12 @@ public class ExclusiveGatewayExecutor extends ElementExecutor implements Initial
         return InstanceDataUtil.getInstanceDataMap(dataList);
     }
 
-    private String saveInstanceDataPO(RuntimeContext runtimeContext) {
-        String instanceDataId = genId();
-        InstanceDataPO instanceDataPO = buildHookInstanceData(instanceDataId, runtimeContext);
-        instanceDataDAO.insert(instanceDataPO);
-        return instanceDataId;
-    }
+    // private String saveInstanceDataPO(RuntimeContext runtimeContext) {
+    //     String instanceDataId = genId();
+    //     InstanceDataPO instanceDataPO = buildHookInstanceData(instanceDataId, runtimeContext);
+    //     instanceDataDAO.insert(instanceDataPO);
+    //     return instanceDataId;
+    // }
 
     private InstanceDataPO buildHookInstanceData(String instanceDataId, RuntimeContext runtimeContext) {
         InstanceDataPO instanceDataPO = new InstanceDataPO();
