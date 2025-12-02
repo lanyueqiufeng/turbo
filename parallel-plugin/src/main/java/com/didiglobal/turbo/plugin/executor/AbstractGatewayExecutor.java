@@ -17,10 +17,12 @@ import com.didiglobal.turbo.plugin.InclusiveGatewayElementPlugin;
 import com.didiglobal.turbo.plugin.ParallelGatewayElementPlugin;
 import com.didiglobal.turbo.plugin.common.Constants;
 import com.didiglobal.turbo.plugin.common.*;
+import com.didiglobal.turbo.plugin.config.ParallelMergeLockConfig;
 import com.didiglobal.turbo.plugin.service.ParallelNodeInstanceService;
 import com.didiglobal.turbo.plugin.util.ExecutorUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import lock.ParallelMergeLock;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -52,9 +54,10 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
     @Lazy
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
+//    @Resource
+//    private RedissonClient redissonClient;
     @Resource
-    private RedissonClient redissonClient;
-
+    private ParallelMergeLock parallelMergeLock;
     @Resource
     private MergeStrategyFactory mergeStrategyFactory;
 
@@ -117,24 +120,11 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
             List<RuntimeExecutor> executeExecutors = getExecuteExecutors(runtimeContext);
             doExecuteByAsyn(runtimeContext, executeExecutors);
         } else if (ExecutorUtil.isJoin(currentNodeModel.getKey(), forkAndJoinNodeKey)) {
-            String key = runtimeContext.getFlowInstanceId() + forkAndJoinNodeKey.getRight();
-            RLock rLock = redissonClient.getLock(key);
-            try {
-                if (rLock.tryLock(10, 30, TimeUnit.SECONDS)) {
-                    try {
+
                         joinNodeHandle(runtimeContext, currentNodeModel,
                                 forkAndJoinNodeKey.getLeft(), flowInstanceId,
                                 currentNodeInstance);
-                    } finally {
-                        rLock.unlock();
-                        LOGGER.info("解锁成功");
-                    }
-                } else {
-                    LOGGER.error("竞争锁时间过长,发布失败");
-                }
-            } catch (InterruptedException e) {
-                throw new RuntimeException("获取锁失败", e);
-            }
+
         } else {
             LOGGER.error("Missing required element attributes: forkJoinMatch[fork,join]");
             throw new ProcessException(ParallelErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES.getErrNo(), ParallelErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES.getErrMsg());
@@ -309,7 +299,7 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
         // 2.save nodeInstanceList to db
         saveNodeInstanceList(runtimeContext);
 
-//        // 3.update flowInstance status while completed
+        // 3.update flowInstance status while completed
 //        if (isCompleted(runtimeContext)) {
 //            if (isSubFlowInstance(runtimeContext)) {
 //                processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.END);
@@ -382,18 +372,28 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
 
     private void joinNodeHandle(RuntimeContext runtimeContext, FlowElement currentNodeModel, String forkKey, String flowInstanceId,
                                 NodeInstanceBO currentNodeInstance) {
-        // fixme  add concurrent lock(Concurrent lock)
-        // current join node info
-        String currentExecuteId = ExecutorUtil.getCurrentExecuteId((String) runtimeContext.getExtendProperties().get("executeId"));
-        String parentExecuteId = ExecutorUtil.getParentExecuteId((String) runtimeContext.getExtendProperties().get("executeId"));
-        // matched fork node info
-        NodeInstancePO forkNodeInstancePo = findForkNodeInstancePO(currentExecuteId, flowInstanceId, forkKey);
-        if (forkNodeInstancePo == null) {
-            LOGGER.error("Not found matched fork node instance||join_node_key={}", currentNodeModel.getKey());
-            throw new ProcessException(ParallelErrorEnum.NOT_FOUND_FORK_INSTANCE.getErrNo(), ParallelErrorEnum.NOT_FOUND_FORK_INSTANCE.getErrMsg());
-        }
-        Set<String> allExecuteIdSet = ExecutorUtil.getExecuteIdSet((String) forkNodeInstancePo.get("executeId"));
-        NodeInstancePO joinNodeInstancePo = findJoinNodeInstancePO(allExecuteIdSet, currentExecuteId, flowInstanceId, currentNodeInstance.getNodeKey());
+        String nodeKey = currentNodeInstance.getNodeKey();
+        boolean lockAcquired = false;
+
+        try {
+            // 使用锁机制防止并发分支覆盖问题，支持重试
+            lockAcquired = acquireLockWithRetry(flowInstanceId, nodeKey);
+            if (!lockAcquired) {
+                LOGGER.error("Failed to acquire lock after retries.||flowInstanceId={}||nodeKey={}", flowInstanceId, nodeKey);
+                throw new ProcessException(ErrorEnum.SYSTEM_ERROR);
+            }
+
+            // current join node info
+            String currentExecuteId = ExecutorUtil.getCurrentExecuteId((String) runtimeContext.getExtendProperties().get("executeId"));
+            String parentExecuteId = ExecutorUtil.getParentExecuteId((String) runtimeContext.getExtendProperties().get("executeId"));
+            // matched fork node info
+            NodeInstancePO forkNodeInstancePo = findForkNodeInstancePO(currentExecuteId, flowInstanceId, forkKey);
+            if (forkNodeInstancePo == null) {
+                LOGGER.error("Not found matched fork node instance||join_node_key={}", currentNodeModel.getKey());
+                throw new ProcessException(ParallelErrorEnum.NOT_FOUND_FORK_INSTANCE.getErrNo(), ParallelErrorEnum.NOT_FOUND_FORK_INSTANCE.getErrMsg());
+            }
+            Set<String> allExecuteIdSet = ExecutorUtil.getExecuteIdSet((String) forkNodeInstancePo.get("executeId"));
+            NodeInstancePO joinNodeInstancePo = findJoinNodeInstancePO(allExecuteIdSet, currentExecuteId, flowInstanceId, nodeKey);
 
         Map<String, Object> properties = currentNodeModel.getProperties();
         String branchMerge = (String) properties.getOrDefault(com.didiglobal.turbo.plugin.common.Constants.ELEMENT_PROPERTIES.BRANCH_MERGE, MergeStrategy.BRANCH_MERGE.JOIN_ALL);
@@ -418,10 +418,68 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
             branchMergeStrategy.joinMerge(runtimeContext, joinNodeInstancePo, currentNodeInstance, parentExecuteId, currentExecuteId, allExecuteIdSet, dataMergeStrategy);
         }
 
-        // clear parallel context and reset execute id
-        runtimeContext.getExtendProperties().put("parallelRuntimeContextList", null);
-        runtimeContext.getExtendProperties().put("executeId", parentExecuteId);
+            // clear parallel context and reset execute id
+            runtimeContext.getExtendProperties().put("parallelRuntimeContextList", null);
+            runtimeContext.getExtendProperties().put("executeId", parentExecuteId);
+        } finally {
+            // 确保释放锁
+            if (lockAcquired) {
+                try {
+                    parallelMergeLock.unlock(flowInstanceId, nodeKey);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to release lock.||flowInstanceId={}||nodeKey={}", flowInstanceId, nodeKey, e);
+                }
+            }
+        }
     }
+    /**
+     * 带重试的锁获取逻辑
+     *
+     * <p>如果获取锁失败，会等待一段时间后重试，直到成功获取或达到最大重试次数
+     *
+     * @param flowInstanceId 流程实例ID
+     * @param nodeKey 节点key
+     * @return true 如果成功获取锁，false 如果达到最大重试次数后仍失败
+     */
+    private boolean acquireLockWithRetry(String flowInstanceId, String nodeKey) {
+        long retryIntervalMs = ParallelMergeLockConfig.getRetryIntervalMs();
+        int maxRetryTimes = ParallelMergeLockConfig.getMaxRetryTimes();
+
+        for (int retryCount = 0; retryCount < maxRetryTimes; retryCount++) {
+            // 每次尝试立即获取锁（waitTimeMs = 0），不等待
+            boolean acquired = parallelMergeLock.tryLock(flowInstanceId, nodeKey, 0);
+            if (acquired) {
+                if (retryCount > 0) {
+                    LOGGER.info("Acquired lock after retries.||flowInstanceId={}||nodeKey={}||retryCount={}",
+                            flowInstanceId, nodeKey, retryCount);
+                }
+                return true;
+            }
+
+            // 如果未获取到锁，等待后重试（最后一次重试不需要等待）
+            if (retryCount < maxRetryTimes - 1) {
+                try {
+                    Thread.sleep(retryIntervalMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    LOGGER.warn("Interrupted while waiting for lock retry.||flowInstanceId={}||nodeKey={}",
+                            flowInstanceId, nodeKey);
+                    return false;
+                }
+            }
+        }
+
+        LOGGER.warn("Failed to acquire lock after max retries.||flowInstanceId={}||nodeKey={}||maxRetryTimes={}",
+                flowInstanceId, nodeKey, maxRetryTimes);
+        return false;
+    }
+
+
+
+
+
+
+
 
     private NodeInstancePO findForkNodeInstancePO(String executeId, String flowInstanceId, String nodeKey) {
         List<NodeInstancePO> nodeInstancePOList = nodeInstanceDAO.selectByFlowInstanceIdAndNodeKey(flowInstanceId, nodeKey);
