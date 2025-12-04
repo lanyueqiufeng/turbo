@@ -1,8 +1,11 @@
 package com.didiglobal.turbo.plugin.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 @TableName("ei_node_instance_parallel")
 public class ParallelNodeInstancePO{
+    @TableId(type = IdType.INPUT)
     private Long id;
     private String executeId;
 

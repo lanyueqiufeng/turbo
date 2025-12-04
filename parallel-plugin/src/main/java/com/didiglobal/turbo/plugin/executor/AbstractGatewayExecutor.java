@@ -19,6 +19,7 @@ import com.didiglobal.turbo.plugin.common.Constants;
 import com.didiglobal.turbo.plugin.common.*;
 import com.didiglobal.turbo.plugin.config.ParallelMergeLockConfig;
 import com.didiglobal.turbo.plugin.service.ParallelNodeInstanceService;
+import com.didiglobal.turbo.plugin.spi.ParallelGatewayElementService;
 import com.didiglobal.turbo.plugin.util.ExecutorUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -26,9 +27,7 @@ import lock.ParallelMergeLock;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
+import org.apache.commons.lang3.tuple.Pair;;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -38,8 +37,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import javax.annotation.Resource;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.atomic.AtomicInteger;;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
@@ -47,8 +45,6 @@ import java.util.stream.Collectors;
 public abstract class AbstractGatewayExecutor extends ElementExecutor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractGatewayExecutor.class);
-
-    private final Lock lock = new ReentrantLock();
 
     @Resource(name = "agentThreadPoolTaskExecutor")
     @Lazy
@@ -63,6 +59,11 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
 
     @Resource
     protected ParallelNodeInstanceService parallelNodeInstanceService;
+
+    @Resource
+    private ParallelGatewayElementService parallelGatewayElementService;
+
+    private final ConcurrentHashMap<String, ReentrantLock> lockMap = new ConcurrentHashMap<>();
 
     /**
      * When parallel gateways and inclusive gateways are used as branch nodes,
@@ -113,6 +114,8 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
         saveAndClearNodeInstanceList(runtimeContext);
 
         if (ExecutorUtil.isFork(currentNodeModel.getKey(), forkAndJoinNodeKey)) {
+            //记录fork节点
+            parallelGatewayElementService.invoke(runtimeContext,"fork");
             // fork
             forkNodeHandle(runtimeContext, currentNodeModel);
             markCurrentNodeCompleted(runtimeContext);
@@ -120,11 +123,24 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
             List<RuntimeExecutor> executeExecutors = getExecuteExecutors(runtimeContext);
             doExecuteByAsyn(runtimeContext, executeExecutors);
         } else if (ExecutorUtil.isJoin(currentNodeModel.getKey(), forkAndJoinNodeKey)) {
-
-                        joinNodeHandle(runtimeContext, currentNodeModel,
-                                forkAndJoinNodeKey.getLeft(), flowInstanceId,
-                                currentNodeInstance);
-
+            String lockKey = flowInstanceId + ":" + forkAndJoinNodeKey.getRight();
+            boolean shouldDeleteLock= false;
+            ReentrantLock lock = lockMap.computeIfAbsent(lockKey, k -> new ReentrantLock());
+            lock.lock();
+            try {
+              shouldDeleteLock = joinNodeHandle(runtimeContext, currentNodeModel, forkAndJoinNodeKey.getLeft(), flowInstanceId, currentNodeInstance);
+            }
+            finally {
+                lock.unlock();
+                if (shouldDeleteLock) {
+                    if (!lock.hasQueuedThreads()) {
+                        boolean removed = lockMap.remove(lockKey, lock);
+                        LOGGER.info("解锁 lock result={} key={}", removed, lockKey);
+                    } else {
+                        LOGGER.warn("skip remove lock because there are queued threads: {}", lockKey);
+                    }
+                }
+            }
         } else {
             LOGGER.error("Missing required element attributes: forkJoinMatch[fork,join]");
             throw new ProcessException(ParallelErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES.getErrNo(), ParallelErrorEnum.REQUIRED_ELEMENT_ATTRIBUTES.getErrMsg());
@@ -370,19 +386,9 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
         }
     }
 
-    private void joinNodeHandle(RuntimeContext runtimeContext, FlowElement currentNodeModel, String forkKey, String flowInstanceId,
+    private boolean joinNodeHandle(RuntimeContext runtimeContext, FlowElement currentNodeModel, String forkKey, String flowInstanceId,
                                 NodeInstanceBO currentNodeInstance) {
         String nodeKey = currentNodeInstance.getNodeKey();
-        boolean lockAcquired = false;
-
-        try {
-            // 使用锁机制防止并发分支覆盖问题，支持重试
-            lockAcquired = acquireLockWithRetry(flowInstanceId, nodeKey);
-            if (!lockAcquired) {
-                LOGGER.error("Failed to acquire lock after retries.||flowInstanceId={}||nodeKey={}", flowInstanceId, nodeKey);
-                throw new ProcessException(ErrorEnum.SYSTEM_ERROR);
-            }
-
             // current join node info
             String currentExecuteId = ExecutorUtil.getCurrentExecuteId((String) runtimeContext.getExtendProperties().get("executeId"));
             String parentExecuteId = ExecutorUtil.getParentExecuteId((String) runtimeContext.getExtendProperties().get("executeId"));
@@ -417,20 +423,12 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
                     currentNodeModel.getKey(), currentNodeInstance.getNodeInstanceId(), runtimeContext.getExtendProperties().get("executeId"), dataMergeStrategy.name());
             branchMergeStrategy.joinMerge(runtimeContext, joinNodeInstancePo, currentNodeInstance, parentExecuteId, currentExecuteId, allExecuteIdSet, dataMergeStrategy);
         }
-
             // clear parallel context and reset execute id
             runtimeContext.getExtendProperties().put("parallelRuntimeContextList", null);
             runtimeContext.getExtendProperties().put("executeId", parentExecuteId);
-        } finally {
-            // 确保释放锁
-            if (lockAcquired) {
-                try {
-                    parallelMergeLock.unlock(flowInstanceId, nodeKey);
-                } catch (Exception e) {
-                    LOGGER.error("Failed to release lock.||flowInstanceId={}||nodeKey={}", flowInstanceId, nodeKey, e);
-                }
-            }
-        }
+            //打印join节点
+            parallelGatewayElementService.invoke(runtimeContext,"join");
+            return true;
     }
     /**
      * 带重试的锁获取逻辑

@@ -109,8 +109,8 @@ public abstract class BranchMergeStrategy {
         String sourceNodeInstanceId = joinNodeInstancePo.getSourceNodeInstanceId();
         String sourceNodeKey = joinNodeInstancePo.getSourceNodeKey();
         String executeId = (String) joinNodeInstancePo.get("executeId");
-//      joinNodeInstancePo.setSourceNodeInstanceId(ExecutorUtil.append(sourceNodeInstanceId, currentNodeInstance.getSourceNodeInstanceId()));
-        joinNodeInstancePo.setSourceNodeKey(ExecutorUtil.append(sourceNodeKey, currentNodeInstance.getSourceNodeKey()));
+        joinNodeInstancePo.setSourceNodeInstanceId(currentNodeInstance.getSourceNodeInstanceId());
+        joinNodeInstancePo.setSourceNodeKey(currentNodeInstance.getSourceNodeKey());
         String newExecuteId = ExecutorUtil.append(executeId, ExecutorUtil.getCurrentExecuteId((String) currentNodeInstance.get("executeId")));
         joinNodeInstancePo.put("executeId", newExecuteId);
         joinNodeInstancePo.setStatus(status);
