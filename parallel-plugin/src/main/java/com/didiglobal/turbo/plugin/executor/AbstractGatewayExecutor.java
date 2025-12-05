@@ -61,6 +61,7 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
     protected ParallelNodeInstanceService parallelNodeInstanceService;
 
     @Resource
+    @Lazy
     private ParallelGatewayElementService parallelGatewayElementService;
 
     private final ConcurrentHashMap<String, ReentrantLock> lockMap = new ConcurrentHashMap<>();
