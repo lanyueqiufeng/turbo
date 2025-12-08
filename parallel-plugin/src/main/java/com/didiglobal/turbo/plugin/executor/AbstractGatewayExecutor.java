@@ -115,10 +115,10 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
         saveAndClearNodeInstanceList(runtimeContext);
 
         if (ExecutorUtil.isFork(currentNodeModel.getKey(), forkAndJoinNodeKey)) {
-            //记录fork节点
-            parallelGatewayElementService.invoke(runtimeContext,"fork");
             // fork
-            forkNodeHandle(runtimeContext, currentNodeModel);
+            int outgoingSize=forkNodeHandle(runtimeContext, currentNodeModel);
+            //记录fork节点
+            parallelGatewayElementService.invoke(runtimeContext,"fork",outgoingSize,(String)runtimeContext.getFlowElementMap().get(forkAndJoinNodeKey.getRight()).getProperties().get("name"));
             markCurrentNodeCompleted(runtimeContext);
             //super.preExecute(runtimeContext);
             List<RuntimeExecutor> executeExecutors = getExecuteExecutors(runtimeContext);
@@ -273,7 +273,15 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
         }
     }
 
-
+    public FlowElement getUniqueNextNode(FlowElement currentFlowElement, Map<String, FlowElement> flowElementMap) {
+        List<String> outgoingKeyList = currentFlowElement.getOutgoing();
+        String nextElementKey = outgoingKeyList.get(0);
+        FlowElement nextFlowElement = FlowModelUtil.getFlowElement(flowElementMap, nextElementKey);
+        while (nextFlowElement.getType() == FlowElementType.SEQUENCE_FLOW) {
+            nextFlowElement = getUniqueNextNode(nextFlowElement, flowElementMap);
+        }
+        return nextFlowElement;
+    }
     private Future<RuntimeContext> getResultWithTimeout(CompletionService<RuntimeContext> completionService, long timeout) {
         try {
             Future<RuntimeContext> future = completionService.poll(timeout, TimeUnit.MILLISECONDS);
@@ -428,7 +436,7 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
             runtimeContext.getExtendProperties().put("parallelRuntimeContextList", null);
             runtimeContext.getExtendProperties().put("executeId", parentExecuteId);
             //打印join节点
-            parallelGatewayElementService.invoke(runtimeContext,"join");
+            parallelGatewayElementService.invoke(runtimeContext,"join",0,(String) getUniqueNextNode(currentNodeModel,runtimeContext.getFlowElementMap()).getProperties().get("name"));
             return true;
     }
     /**
@@ -507,7 +515,7 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
         return instanceOptional.orElse(null);
     }
 
-    private void forkNodeHandle(RuntimeContext runtimeContext, FlowElement currentNodeModel) {
+    private int forkNodeHandle(RuntimeContext runtimeContext, FlowElement currentNodeModel) {
         // 1. execute outgoing size
         int outgoingSize = calculateOutgoingSize(currentNodeModel, runtimeContext.getFlowElementMap(), runtimeContext.getInstanceDataMap());
         if (outgoingSize == 0) {
@@ -524,6 +532,8 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
         nodeInstanceDAO.insert(nodeInstancePO);
         nodeInstanceLogDAO.insert(buildNodeInstanceLogPO(nodeInstancePO));
         instanceDataDAO.insert(buildInstanceDataPO(runtimeContext, runtimeContext.getCurrentNodeInstance(), runtimeContext.getFlowInstanceId()));
+
+        return  outgoingSize;
     }
 
     private List<String> getExecuteIdList(int outgoingSize) {

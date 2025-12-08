@@ -10,5 +10,5 @@ import com.didiglobal.turbo.engine.common.RuntimeContext;
  */
 public interface ParallelGatewayElementService {
 
-    void invoke(RuntimeContext runtimeContext,String nodeType);
+    void invoke(RuntimeContext runtimeContext,String nodeType,int outgoingSize,String nextNodeName);
 }
