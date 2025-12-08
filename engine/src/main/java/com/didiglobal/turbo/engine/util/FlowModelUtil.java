@@ -164,6 +164,8 @@ public class FlowModelUtil {
                 elementType = (String) flowElement.getProperties().get(ChatFlowConstant.PropKey.NODE_TYPE);
             } else if (FlowElementType.SERVICE_TASK == type) {
                 elementType = (String) flowElement.getProperties().get(ChatFlowConstant.PropKey.NODE_TYPE);
+            }  else if (FlowElementType.ParallelPlugin == type) {
+                elementType = (String) flowElement.getProperties().get(ChatFlowConstant.PropKey.NODE_TYPE);
             }
         }
         return elementType;

@@ -101,8 +101,12 @@ public enum ErrorEnum {
     GET_CALL_ACTIVITY_MODEL_FAILED(4019,"Get CallActivity model failed"),
 
     NO_RECEIVE_SUB_FLOW_INSTANCE(4020,"Do not receive subFlowInstanceId"),
+
     UPDATE_INSTANCE_DATA_FAILED(4021, "Update instanceData failed"),
 
+    FORK_NOT_MATCH (4022,"没有找到相应的汇聚节点"),
+
+    JOIN_NOT_MATCH (4023,"没有找到相应的并行节点"),
     // 环节配置检查失败
     FLOW_PROPERTIES_CHECK_FAILED(6001,"Flow properties check failed"),
 

@@ -39,6 +39,8 @@ public interface ChatFlowConstant {
 
         String CATCH_ERROR = "catchError";
 
+        String Fork_JOIN = "forkJoinMatch";
+
         String NODE_TRIGGER = "nodeTrigger";
     }
 
