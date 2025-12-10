@@ -63,6 +63,8 @@ public enum ErrorEnum {
 
     FORK_JOIN_INVALID(3220, "网关环节配置异常，缺少对应字段"),
 
+    FORK_JOINNOT_EXIST(3221, "并行节点和汇集节点的分支数量不匹配"),
+
     FORK_NOT_MATCH (3222,"没有找到相应的汇聚节点"),
 
     JOIN_NOT_MATCH (3223,"没有找到相应的并行节点"),

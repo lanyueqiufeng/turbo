@@ -190,11 +190,20 @@ public class FlowModelValidator {
                     checkItemVo.setElementKey(flowElement.getKey());
                     checkItemVos.add(checkItemVo);
                 }
-                //if("fork".equals(type)){
-                //    // 分支暂不考虑
-                //    // 一直往后找 遇到 其他fork/匹配的join 结束 遇到其他join/结束节点/业务流/等待输出 throw
-                //    getUniqueNextNode(flowElement,flowElementMap);
-                //}
+                if ("fork".equals(type)) {
+                    // fork分支数量和join分支数量
+                    int nodeSum = null == flowElement.getOutgoing() ? 0 : flowElement.getOutgoing().size();
+                    int oppositeSum = null == opposite.getIncoming() ? 0 : opposite.getIncoming().size();
+                    if (nodeSum != oppositeSum) {
+                        CheckFlowItemVo checkItemVo = new CheckFlowItemVo();
+                        checkItemVo.setElementName((String) properties.get("name"));
+                        checkItemVo.setExceptionMsg(ErrorEnum.FORK_JOINNOT_EXIST.getErrMsg());
+                        checkItemVo.setErrNo(ErrorEnum.FORK_JOINNOT_EXIST.getErrNo());
+                        checkItemVo.setElementType(type);
+                        checkItemVo.setElementKey(flowElement.getKey());
+                        checkItemVos.add(checkItemVo);
+                    }
+                }
 
             });
         }
