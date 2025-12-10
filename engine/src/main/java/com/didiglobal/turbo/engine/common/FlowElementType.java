@@ -14,8 +14,7 @@ public class FlowElementType {
     // 子流程（业务流+动态业务流）
     public static final int CALL_ACTIVITY = 8;
     // 并行汇聚网关
-    public static final int ParallelPlugin = 9;
-
+    public static final int PARALLEL_PLUGIN = 9;
     // 回复环节
     public static final int REPLY_NODE = 601;
 
