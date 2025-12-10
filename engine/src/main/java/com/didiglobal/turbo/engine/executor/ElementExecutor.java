@@ -101,6 +101,9 @@ public abstract class ElementExecutor extends RuntimeExecutor {
 
     @Override
     public RuntimeExecutor getExecuteExecutor(RuntimeContext runtimeContext) throws ProcessException {
+        if (runtimeContext.getCurrentNodeInstance().getNodeType()==FlowElementType.END_EVENT){
+            return null;
+        };
         Map<String, FlowElement> flowElementMap = runtimeContext.getFlowElementMap();
         FlowElement flowElement = getUniqueNextNode(runtimeContext.getCurrentNodeModel(), flowElementMap);
         runtimeContext.setCurrentNodeModel(flowElement);

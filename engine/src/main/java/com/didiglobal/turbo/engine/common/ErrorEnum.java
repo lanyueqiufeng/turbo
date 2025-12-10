@@ -61,6 +61,12 @@ public enum ErrorEnum {
 
     BRANCH_CONDITIONS_SHOULD_BE_FEWER_THAN_OUTGOING(3219,"分支条件应当比出口少一个"),
 
+    FORK_JOIN_INVALID(3220, "网关环节配置异常，缺少对应字段"),
+
+    FORK_NOT_MATCH (3222,"没有找到相应的汇聚节点"),
+
+    JOIN_NOT_MATCH (3223,"没有找到相应的并行节点"),
+
     //4000~4999 流程执行错误
     COMMIT_FAILED(4001,"Commit task failed"),
 
@@ -104,9 +110,7 @@ public enum ErrorEnum {
 
     UPDATE_INSTANCE_DATA_FAILED(4021, "Update instanceData failed"),
 
-    FORK_NOT_MATCH (4022,"没有找到相应的汇聚节点"),
 
-    JOIN_NOT_MATCH (4023,"没有找到相应的并行节点"),
     // 环节配置检查失败
     FLOW_PROPERTIES_CHECK_FAILED(6001,"Flow properties check failed"),
 

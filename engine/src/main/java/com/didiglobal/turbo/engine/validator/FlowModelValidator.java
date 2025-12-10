@@ -6,6 +6,7 @@ import com.didiglobal.turbo.engine.common.ErrorEnum;
 import com.didiglobal.turbo.engine.common.FlowElementType;
 import com.didiglobal.turbo.engine.exception.DefinitionException;
 import com.didiglobal.turbo.engine.exception.ProcessException;
+import com.didiglobal.turbo.engine.executor.ElementExecutor;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.FlowModel;
 import com.didiglobal.turbo.engine.param.CommonParam;
@@ -49,7 +50,7 @@ public class FlowModelValidator {
                 String elementName = FlowModelUtil.getElementName(flowElement);
                 String elementKey = flowElement.getKey();
                 String exceptionMsg = MessageFormat.format(Constants.MODEL_DEFINITION_ERROR_MSG_FORMAT,
-                    ErrorEnum.ELEMENT_KEY_NOT_UNIQUE, elementName, elementKey);
+                        ErrorEnum.ELEMENT_KEY_NOT_UNIQUE, elementName, elementKey);
                 LOGGER.warn(exceptionMsg);
                 throw new DefinitionException(ErrorEnum.ELEMENT_KEY_NOT_UNIQUE.getErrNo(), exceptionMsg);
             }
@@ -96,7 +97,8 @@ public class FlowModelValidator {
 
         List<FlowElement> flowElementList = flowModel.getFlowElementList();
         Map<String, FlowElement> flowElementMap = Maps.newHashMap();
-
+        // key nodeType
+        Map<String, String> forkJoinMap = Maps.newHashMap();
         for (FlowElement flowElement : flowElementList) {
             if (flowElementMap.containsKey(flowElement.getKey())) {
                 String elementName = FlowModelUtil.getElementName(flowElement);
@@ -106,8 +108,11 @@ public class FlowModelValidator {
                 throw new DefinitionException(ErrorEnum.ELEMENT_KEY_NOT_UNIQUE.getErrNo(), exceptionMsg);
             }
             flowElementMap.put(flowElement.getKey(), flowElement);
+            if (9 == flowElement.getType()) {
+                // 这里也不校验空指针，相信前端
+                forkJoinMap.put(flowElement.getKey(), (String) flowElement.getProperties().get("nodeType"));
+            }
         }
-
 
         int startEventCount = 0;
         int endEventCount = 0;
@@ -116,7 +121,7 @@ public class FlowModelValidator {
 
             ElementValidator elementValidator = elementValidatorFactory.getElementValidator(flowElement);
             try {
-                elementValidator.check(flowElementMap,flowElement);
+                elementValidator.check(flowElementMap, flowElement);
             } catch (DefinitionException e) {
                 CheckFlowItemVo checkItemVo = new CheckFlowItemVo();
                 checkItemVo.setElementKey(flowElement.getKey());
@@ -152,6 +157,58 @@ public class FlowModelValidator {
             checkItemVo.setErrNo(ErrorEnum.END_NODE_INVALID.getErrNo());
             checkItemVos.add(checkItemVo);
         }
+        if (!forkJoinMap.isEmpty()) {
+            forkJoinMap.forEach((node, type) -> {
+                FlowElement flowElement = flowElementMap.get(node);
+                Map<String, Object> properties = flowElement.getProperties();
+                if (null == type){
+                    // 以防万一
+                    CheckFlowItemVo checkItemVo = new CheckFlowItemVo();
+                    checkItemVo.setElementName((String) properties.get("name"));
+                    checkItemVo.setExceptionMsg(ErrorEnum.FORK_JOIN_INVALID.getErrMsg());
+                    checkItemVo.setErrNo(ErrorEnum.FORK_JOIN_INVALID.getErrNo());
+                    checkItemVo.setElementType(type);
+                    checkItemVos.add(checkItemVo);
+                }
+                Boolean isFork = "fork".equals(type);
+                // 节点校验保证 forkJoinMatch 配置了 fork join 这里直接转型
+                Object match = properties.get(ChatFlowConstant.PropKey.Fork_JOIN);
+                Map forkJoinMatch =(Map) match;
+                String fork = (String) forkJoinMatch.get("fork");
+                String join = (String) forkJoinMatch.get("join");
+
+                FlowElement opposite = flowElementMap.get(isFork ? join:fork);
+                // 自己配置不是自己 对方的配置不是自己
+                if (!node.equals(isFork ? fork: join) || null == opposite
+                        || 9!=opposite.getType() || null ==opposite.getProperties()
+                        || !match.equals(opposite.getProperties().get(ChatFlowConstant.PropKey.Fork_JOIN))){
+                    CheckFlowItemVo checkItemVo = new CheckFlowItemVo();
+                    checkItemVo.setElementName((String) properties.get("name"));
+                    checkItemVo.setExceptionMsg(isFork ? ErrorEnum.FORK_NOT_MATCH.getErrMsg(): ErrorEnum.JOIN_NOT_MATCH.getErrMsg() );
+                    checkItemVo.setErrNo(isFork ? ErrorEnum.FORK_NOT_MATCH.getErrNo(): ErrorEnum.JOIN_NOT_MATCH.getErrNo());
+                    checkItemVo.setElementType(type);
+                    checkItemVo.setElementKey(flowElement.getKey());
+                    checkItemVos.add(checkItemVo);
+                }
+                //if("fork".equals(type)){
+                //    // 分支暂不考虑
+                //    // 一直往后找 遇到 其他fork/匹配的join 结束 遇到其他join/结束节点/业务流/等待输出 throw
+                //    getUniqueNextNode(flowElement,flowElementMap);
+                //}
+
+            });
+        }
         return checkItemVos;
+    }
+
+
+    protected FlowElement getUniqueNextNode(FlowElement currentFlowElement, Map<String, FlowElement> flowElementMap) {
+        List<String> outgoingKeyList = currentFlowElement.getOutgoing();
+        String nextElementKey = outgoingKeyList.get(0);
+        FlowElement nextFlowElement = FlowModelUtil.getFlowElement(flowElementMap, nextElementKey);
+        while (nextFlowElement.getType() == FlowElementType.SEQUENCE_FLOW) {
+            nextFlowElement = getUniqueNextNode(nextFlowElement, flowElementMap);
+        }
+        return nextFlowElement;
     }
 }

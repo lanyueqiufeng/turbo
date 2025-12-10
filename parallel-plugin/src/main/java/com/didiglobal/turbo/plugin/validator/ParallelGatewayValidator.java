@@ -24,7 +24,8 @@ public class ParallelGatewayValidator extends ElementValidator {
 
     protected void checkProperties(Map<String, FlowElement> flowElementMap, FlowElement flowElement) throws DefinitionException {
         //在这个地方可以去checklist 并行网关必须成对出现，同时，并行网关的连线不能有 用户任务，或者业务流
-        Object forkJoinPropObj = flowElement.getProperties().get(ChatFlowConstant.PropKey.Fork_JOIN);
+        Map<String, Object> properties = flowElement.getProperties();
+        Object forkJoinPropObj = properties.get(ChatFlowConstant.PropKey.Fork_JOIN);
         if (forkJoinPropObj instanceof Map) {
             Map<String, String> forkJoinProp = (Map<String, String>) forkJoinPropObj;
             if (StringUtils.isBlank(forkJoinProp.get("fork"))){
@@ -33,7 +34,8 @@ public class ParallelGatewayValidator extends ElementValidator {
             if (StringUtils.isBlank(forkJoinProp.get("join"))){
                 throwElementValidatorException(flowElement, ErrorEnum.JOIN_NOT_MATCH);
             }
+            return;
         }
-
+        throwElementValidatorException(flowElement, ErrorEnum.FORK_JOIN_INVALID);
     }
 }

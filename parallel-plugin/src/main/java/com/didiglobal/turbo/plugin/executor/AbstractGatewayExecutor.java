@@ -272,16 +272,6 @@ public abstract class AbstractGatewayExecutor extends ElementExecutor {
             throw em.get(suspendExceptionNodeKey);
         }
     }
-
-    public FlowElement getUniqueNextNode(FlowElement currentFlowElement, Map<String, FlowElement> flowElementMap) {
-        List<String> outgoingKeyList = currentFlowElement.getOutgoing();
-        String nextElementKey = outgoingKeyList.get(0);
-        FlowElement nextFlowElement = FlowModelUtil.getFlowElement(flowElementMap, nextElementKey);
-        while (nextFlowElement.getType() == FlowElementType.SEQUENCE_FLOW) {
-            nextFlowElement = getUniqueNextNode(nextFlowElement, flowElementMap);
-        }
-        return nextFlowElement;
-    }
     private Future<RuntimeContext> getResultWithTimeout(CompletionService<RuntimeContext> completionService, long timeout) {
         try {
             Future<RuntimeContext> future = completionService.poll(timeout, TimeUnit.MILLISECONDS);
