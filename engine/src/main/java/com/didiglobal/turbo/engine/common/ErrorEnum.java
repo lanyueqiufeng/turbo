@@ -69,6 +69,12 @@ public enum ErrorEnum {
 
     JOIN_NOT_MATCH (3223,"没有找到相应的并行节点"),
 
+    JOIN_NOT_USER_TASK (3224,"并行汇聚网关内不能使用用户输入"),
+
+    JOIN_NOT_CALL_ACTIVITY (3225,"并行汇聚网关内不能使用业务流"),
+
+    JOIN_NOT_END_EVENT (3226,"并行汇聚网关内不能使用结束节点"),
+
     //4000~4999 流程执行错误
     COMMIT_FAILED(4001,"Commit task failed"),
 
