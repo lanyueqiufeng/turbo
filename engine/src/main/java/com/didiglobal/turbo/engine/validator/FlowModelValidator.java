@@ -190,27 +190,71 @@ public class FlowModelValidator {
                     checkItemVo.setElementKey(flowElement.getKey());
                     checkItemVos.add(checkItemVo);
                 }
-                if ("fork".equals(type)) {
-                    // fork分支数量和join分支数量
-                    int nodeSum = null == flowElement.getOutgoing() ? 0 : flowElement.getOutgoing().size();
-                    int oppositeSum = null == opposite.getIncoming() ? 0 : opposite.getIncoming().size();
-                    if (nodeSum != oppositeSum) {
-                        CheckFlowItemVo checkItemVo = new CheckFlowItemVo();
-                        checkItemVo.setElementName((String) properties.get("name"));
-                        checkItemVo.setExceptionMsg(ErrorEnum.FORK_JOINNOT_EXIST.getErrMsg());
-                        checkItemVo.setErrNo(ErrorEnum.FORK_JOINNOT_EXIST.getErrNo());
-                        checkItemVo.setElementType(type);
-                        checkItemVo.setElementKey(flowElement.getKey());
-                        checkItemVos.add(checkItemVo);
-                    }
-                }
-
+//                if ("fork".equals(type)&& null != opposite) {
+//                    // fork分支数量和join分支数量
+//                    int nodeSum = null == flowElement.getOutgoing() ? 0 : flowElement.getOutgoing().size();
+//                    int oppositeSum = null == opposite.getIncoming() ? 0 : opposite.getIncoming().size();
+//                    if (nodeSum != oppositeSum) {
+//                        CheckFlowItemVo checkItemVo = new CheckFlowItemVo();
+//                        checkItemVo.setElementName((String) properties.get("name"));
+//                        checkItemVo.setExceptionMsg(ErrorEnum.FORK_JOINNOT_EXIST.getErrMsg());
+//                        checkItemVo.setErrNo(ErrorEnum.FORK_JOINNOT_EXIST.getErrNo());
+//                        checkItemVo.setElementType(type);
+//                        checkItemVo.setElementKey(flowElement.getKey());
+//                        checkItemVos.add(checkItemVo);
+//                    }
+//                    try {
+//                        checkNext(opposite, flowElement, flowElementMap, forkJoinMap);
+//                    } catch (Exception e) {
+//                        CheckFlowItemVo checkItemVo = new CheckFlowItemVo();
+//                        checkItemVo.setElementName((String) properties.get("name"));
+//                        if (e.getMessage().equals("3")){
+//                            checkItemVo.setExceptionMsg(ErrorEnum.JOIN_NOT_END_EVENT.getErrMsg());
+//                            checkItemVo.setErrNo(ErrorEnum.JOIN_NOT_END_EVENT.getErrNo());
+//                        }
+//                        if (e.getMessage().equals("4")){
+//                            checkItemVo.setExceptionMsg(ErrorEnum.JOIN_NOT_USER_TASK.getErrMsg());
+//                            checkItemVo.setErrNo(ErrorEnum.JOIN_NOT_USER_TASK.getErrNo());
+//                        }
+//                        if (e.getMessage().equals("8")){
+//                            checkItemVo.setExceptionMsg(ErrorEnum.JOIN_NOT_CALL_ACTIVITY.getErrMsg());
+//                            checkItemVo.setErrNo(ErrorEnum.JOIN_NOT_CALL_ACTIVITY.getErrNo());
+//                        }
+////                    checkItemVo.setExceptionMsg(e.getMessage());
+////                    checkItemVo.setErrNo(ErrorEnum.FORK_JOINNOT_EXIST.getErrNo());
+//                        checkItemVo.setElementType(type);
+//                        checkItemVo.setElementKey(flowElement.getKey());
+//                        checkItemVos.add(checkItemVo);
+//                    }
+                //}
             });
         }
         return checkItemVos;
     }
 
-
+    private void checkNext(FlowElement opposite,
+                           FlowElement currentFlowElement,
+                           Map<String, FlowElement> flowElementMap,
+                           Map<String, String> forkJoinMap) throws Exception {
+        // 分支暂不考虑 容易死循环
+        List<String> outgoingKeyList = currentFlowElement.getOutgoing();
+        for (String next : outgoingKeyList) {
+            FlowElement nextFlowElement = FlowModelUtil.getFlowElement(flowElementMap, next);
+            if (nextFlowElement.getType() == FlowElementType.END_EVENT
+                    || nextFlowElement.getType() == FlowElementType.USER_TASK
+                    || nextFlowElement.getType() == FlowElementType.CALL_ACTIVITY) {
+                throw new Exception(String.valueOf(nextFlowElement.getType()));
+            } else if (nextFlowElement.getType() == FlowElementType.PARALLEL_PLUGIN) {
+                // 其他fork/匹配的join结束 其他join异常
+                if ("join".equals(forkJoinMap.get(next)) && !opposite.getKey().equals(next)) {
+                    // 三级并行 无法确定二级和三级上下级关系
+                    throw new Exception("无法匹配");
+                }
+            }else {
+                checkNext(opposite, nextFlowElement, flowElementMap, forkJoinMap);
+            }
+        }
+    }
     protected FlowElement getUniqueNextNode(FlowElement currentFlowElement, Map<String, FlowElement> flowElementMap) {
         List<String> outgoingKeyList = currentFlowElement.getOutgoing();
         String nextElementKey = outgoingKeyList.get(0);
