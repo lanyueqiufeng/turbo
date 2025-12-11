@@ -1,8 +1,10 @@
 package com.didiglobal.turbo.engine.executor;
 
 import com.didiglobal.turbo.engine.bo.NodeInstanceBO;
-import com.didiglobal.turbo.engine.common.*;
-import com.didiglobal.turbo.engine.entity.FlowInstancePO;
+import com.didiglobal.turbo.engine.common.ErrorEnum;
+import com.didiglobal.turbo.engine.common.FlowElementType;
+import com.didiglobal.turbo.engine.common.NodeInstanceStatus;
+import com.didiglobal.turbo.engine.common.RuntimeContext;
 import com.didiglobal.turbo.engine.entity.InstanceDataPO;
 import com.didiglobal.turbo.engine.entity.NodeInstancePO;
 import com.didiglobal.turbo.engine.exception.ProcessException;
@@ -10,6 +12,7 @@ import com.didiglobal.turbo.engine.exception.ReentrantException;
 import com.didiglobal.turbo.engine.exception.SuspendException;
 import com.didiglobal.turbo.engine.model.FlowElement;
 import com.didiglobal.turbo.engine.model.InstanceData;
+import com.didiglobal.turbo.engine.spi.ServiceTaskExecuteService;
 import com.didiglobal.turbo.engine.util.ExpressionCalculator;
 import com.didiglobal.turbo.engine.util.FlowModelUtil;
 import com.didiglobal.turbo.engine.util.InstanceDataUtil;
@@ -17,6 +20,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -28,6 +33,10 @@ public abstract class ElementExecutor extends RuntimeExecutor {
 
     @Resource
     protected ExpressionCalculator expressionCalculator;
+
+    @Autowired(required = false)
+    @Lazy
+    private ServiceTaskExecuteService serviceTaskExecuteService;
 
     @Override
     public void execute(RuntimeContext runtimeContext) throws ProcessException {
@@ -86,11 +95,15 @@ public abstract class ElementExecutor extends RuntimeExecutor {
         currentNodeInstance.setInstanceDataId(StringUtils.defaultString(runtimeContext.getInstanceDataId(), StringUtils.EMPTY));
 
         runtimeContext.setCurrentNodeInstance(currentNodeInstance);
-        // 终止校验
-        FlowInstancePO flowInstancePO = processInstanceDAO.selectByFlowInstanceId(runtimeContext.getFlowInstanceId());
-        if (FlowInstanceStatus.TERMINATED == flowInstancePO.getStatus()) {
+        // 流程终止检查
+        if (serviceTaskExecuteService != null && serviceTaskExecuteService.flowInstanceTerminated(flowInstanceId)) {
             throw new ProcessException(ErrorEnum.COMMIT_REJECTRD);
         }
+
+        // FlowInstancePO flowInstancePO = processInstanceDAO.selectByFlowInstanceId(runtimeContext.getFlowInstanceId());
+        // if (FlowInstanceStatus.TERMINATED == flowInstancePO.getStatus()) {
+        //     throw new ProcessException(ErrorEnum.COMMIT_REJECTRD);
+        // }
     }
 
     protected void doExecute(RuntimeContext runtimeContext) throws ProcessException {

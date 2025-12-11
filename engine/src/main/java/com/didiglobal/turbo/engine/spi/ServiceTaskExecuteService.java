@@ -19,4 +19,21 @@ public interface ServiceTaskExecuteService {
      * @return new infos
      */
     JSONObject invoke(RuntimeContext runtimeContext);
+
+
+    /**
+     * 从redis中判断当前流程实例id是否需要中断
+     *
+     * @param flowInstanceId 流程实例id
+     * @return 是否中断
+     */
+    Boolean flowInstanceTerminated(String flowInstanceId);
+
+    /**
+     * 修改流程实例状态 1：终止
+     *
+     * @param flowInstanceId     流程实例id
+     * @param flowInstanceStatus 流程实例状态
+     */
+    void changeFlowInsStatus(String flowInstanceId, String flowInstanceStatus);
 }
