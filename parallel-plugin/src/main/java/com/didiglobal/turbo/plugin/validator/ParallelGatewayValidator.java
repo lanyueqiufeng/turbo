@@ -29,10 +29,10 @@ public class ParallelGatewayValidator extends ElementValidator {
         if (forkJoinPropObj instanceof Map) {
             Map<String, String> forkJoinProp = (Map<String, String>) forkJoinPropObj;
             if (StringUtils.isBlank(forkJoinProp.get("fork"))){
-                throwElementValidatorException(flowElement, ErrorEnum.FORK_NOT_MATCH);
+                throwElementValidatorException(flowElement, ErrorEnum.NOT_FOUND_FORK);
             }
             if (StringUtils.isBlank(forkJoinProp.get("join"))){
-                throwElementValidatorException(flowElement, ErrorEnum.JOIN_NOT_MATCH);
+                throwElementValidatorException(flowElement, ErrorEnum.NOT_FOUND_JOIN);
             }
             return;
         }

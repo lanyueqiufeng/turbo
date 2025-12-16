@@ -61,11 +61,15 @@ public enum ErrorEnum {
 
     BRANCH_CONDITIONS_SHOULD_BE_FEWER_THAN_OUTGOING(3219,"分支条件应当比出口少一个"),
 
-    FORK_JOIN_INVALID(3220, "网关环节配置异常，缺少对应字段"),
+    FORK_JOIN_INVALID(3220, "网关环节配置异常，缺少nodeType对应字段"),
 
-    FORK_JOINNOT_EXIST(3221, "并行节点和汇集节点的分支数量不匹配"),
+    FORK_JOINNOT_EXIST(3221, "并行节点和汇集节点不匹配"),
 
     FORK_NOT_MATCH (3222,"没有找到相应的汇聚节点"),
+
+    NOT_FOUND_JOIN (3222,"节点配置错误，当前节点缺少对应的汇聚网关"),
+
+    NOT_FOUND_FORK (3223,"节点配置错误，当前节点缺少对应的并行网关"),
 
     JOIN_NOT_MATCH (3223,"没有找到相应的并行节点"),
 
