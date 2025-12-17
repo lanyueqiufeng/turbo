@@ -107,7 +107,8 @@ public class FlowModelValidator {
         int endEventCount = 0;
         FlowElement startElement = null;
         boolean next = true;
-        for (FlowElement flowElement : flowElementList) {
+        //在这循环把所有的节点全部放入到map中
+        for (FlowElement flowElement : flowElementList){
             if (flowElementMap.containsKey(flowElement.getKey())) {
                 String elementName = FlowModelUtil.getElementName(flowElement);
                 String elementKey = flowElement.getKey();
@@ -116,6 +117,8 @@ public class FlowModelValidator {
                 throw new DefinitionException(ErrorEnum.ELEMENT_KEY_NOT_UNIQUE.getErrNo(), exceptionMsg);
             }
             flowElementMap.put(flowElement.getKey(), flowElement);
+        }
+        for (FlowElement flowElement : flowElementList) {
             if (9 == flowElement.getType()) {
                 // 这里也不校验空指针，相信前端
                 forkJoinMap.put(flowElement.getKey(), (String) flowElement.getProperties().get("nodeType"));
