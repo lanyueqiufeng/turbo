@@ -5,6 +5,7 @@ import com.didiglobal.turbo.engine.plugin.CustomOperationHandler;
 import com.didiglobal.turbo.engine.util.MapToObjectConverter;
 import com.didiglobal.turbo.plugin.dao.mapper.ParallelNodeInstanceMapper;
 import com.didiglobal.turbo.plugin.entity.ParallelNodeInstancePO;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.session.SqlSession;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("unchecked")
@@ -53,14 +55,20 @@ public class ParallelNodeInstanceHandler implements CustomOperationHandler {
     private void handleInsert(Object parameterObject, ParallelNodeInstanceMapper mapper) {
         if (parameterObject instanceof NodeInstancePO) {
             ParallelNodeInstancePO parallelNodeInstancePO = convertToParallelLog((NodeInstancePO) parameterObject);
+            if (parallelNodeInstancePO == null || null == parallelNodeInstancePO.getExecuteId()) {
+                return;
+            }
             mapper.insert(parallelNodeInstancePO);
         } else if (parameterObject instanceof Map) {
             List<Object> list = (List<Object>) ((Map<?,?>) parameterObject).get("list");
             if (list != null) {
                 List<ParallelNodeInstancePO> parallelLogList = list.stream()
-                    .map(this::convertToParallelLogSafe)
-                    .collect(Collectors.toList());
-                mapper.insertList(parallelLogList);
+                        .map(this::convertToParallelLogSafe)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+                if (!parallelLogList.isEmpty()) {
+                    mapper.insertList(parallelLogList);
+                }
             }
         }
     }
@@ -68,7 +76,7 @@ public class ParallelNodeInstanceHandler implements CustomOperationHandler {
     private void handleUpdate(Object parameterObject, ParallelNodeInstanceMapper mapper) {
         if (parameterObject instanceof NodeInstancePO) {
             ParallelNodeInstancePO parallelNodeInstancePO = convertToParallelLog((NodeInstancePO) parameterObject);
-            if (null == parallelNodeInstancePO.getExecuteId()) {
+            if (parallelNodeInstancePO == null || null == parallelNodeInstancePO.getExecuteId()) {
                 return;
             }
             mapper.updateById(parallelNodeInstancePO);
@@ -78,7 +86,7 @@ public class ParallelNodeInstanceHandler implements CustomOperationHandler {
     private void handleDelete(Object parameterObject, ParallelNodeInstanceMapper mapper) {
         if (parameterObject instanceof NodeInstancePO) {
             ParallelNodeInstancePO parallelNodeInstancePO = convertToParallelLog((NodeInstancePO) parameterObject);
-            if (null != parallelNodeInstancePO.getId())
+            if (parallelNodeInstancePO != null && null != parallelNodeInstancePO.getId())
                 mapper.deleteById(parallelNodeInstancePO.getId());
         }
     }
@@ -89,8 +97,10 @@ public class ParallelNodeInstanceHandler implements CustomOperationHandler {
             nodeInstancePOList.forEach(nodeInstancePO -> {
                 try {
                     ParallelNodeInstancePO parallelNodeInstancePO = mapper.selectById(nodeInstancePO.getId());
-                    Map<String, Object> properties = MapToObjectConverter.convertObjectToMap(parallelNodeInstancePO);
-                    nodeInstancePO.getProperties().putAll(properties);
+                    if (parallelNodeInstancePO != null) {
+                        Map<String, Object> properties = MapToObjectConverter.convertObjectToMap(parallelNodeInstancePO);
+                        nodeInstancePO.getProperties().putAll(properties);
+                    }
                 } catch (IllegalAccessException e) {
                     LOGGER.error("Error converting ParallelNodeInstancePO to map. ID={}", nodeInstancePO.getId(), e);
                 }
@@ -101,6 +111,9 @@ public class ParallelNodeInstanceHandler implements CustomOperationHandler {
     private ParallelNodeInstancePO convertToParallelLog(NodeInstancePO nodeInstancePO) {
         try {
             ParallelNodeInstancePO parallelNodeInstancePO = MapToObjectConverter.convertMapToObject(nodeInstancePO.getProperties(), ParallelNodeInstancePO.class);
+            if (StringUtils.isBlank(parallelNodeInstancePO.getExecuteId())) {
+                return null;
+            }
             parallelNodeInstancePO.setId(nodeInstancePO.getId());
             return parallelNodeInstancePO;
         } catch (IllegalAccessException | InstantiationException e) {
