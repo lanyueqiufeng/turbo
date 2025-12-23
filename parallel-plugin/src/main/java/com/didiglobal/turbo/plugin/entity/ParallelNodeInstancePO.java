@@ -6,14 +6,14 @@ import com.baomidou.mybatisplus.annotation.TableName;
 @TableName("ei_node_instance_parallel")
 public class ParallelNodeInstancePO{
     @TableId(type = IdType.INPUT)
-    private Long id;
+    private String id;
     private String executeId;
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

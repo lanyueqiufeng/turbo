@@ -3,8 +3,10 @@ package com.didiglobal.turbo.plugin.dao;
 import com.didiglobal.turbo.engine.entity.NodeInstancePO;
 import com.didiglobal.turbo.engine.plugin.CustomOperationHandler;
 import com.didiglobal.turbo.engine.util.MapToObjectConverter;
+import com.didiglobal.turbo.plugin.config.SpringContextHolder;
 import com.didiglobal.turbo.plugin.dao.mapper.ParallelNodeInstanceMapper;
 import com.didiglobal.turbo.plugin.entity.ParallelNodeInstancePO;
+import com.didiglobal.turbo.plugin.service.RedisService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.SqlCommandType;
@@ -12,7 +14,6 @@ import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -21,6 +22,15 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unchecked")
 public class ParallelNodeInstanceHandler implements CustomOperationHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ParallelNodeInstanceHandler.class);
+    private RedisService redisService;
+
+    private RedisService redis() {
+        if (redisService == null) {
+            redisService = SpringContextHolder.getBean(RedisService.class);
+        }
+        return redisService;
+    }
+
 
     @Override
     public void handle(SqlCommandType commandType, MappedStatement mappedStatement, Object parameterObject, Object originalResult, SqlSessionFactory sqlSessionFactory) {
@@ -58,7 +68,9 @@ public class ParallelNodeInstanceHandler implements CustomOperationHandler {
             if (parallelNodeInstancePO == null || null == parallelNodeInstancePO.getExecuteId()) {
                 return;
             }
-            mapper.insert(parallelNodeInstancePO);
+            //存到redis
+            redis().save(parallelNodeInstancePO.getId(), parallelNodeInstancePO.getExecuteId());
+           //mapper.insert(parallelNodeInstancePO);
         } else if (parameterObject instanceof Map) {
             List<Object> list = (List<Object>) ((Map<?,?>) parameterObject).get("list");
             if (list != null) {
@@ -67,7 +79,10 @@ public class ParallelNodeInstanceHandler implements CustomOperationHandler {
                         .filter(Objects::nonNull)
                         .collect(Collectors.toList());
                 if (!parallelLogList.isEmpty()) {
-                    mapper.insertList(parallelLogList);
+                   //mapper.insertList(parallelLogList);
+                    for (ParallelNodeInstancePO po : parallelLogList) {
+                        redis().save(po.getId(), po.getExecuteId());
+                    }
                 }
             }
         }
@@ -79,15 +94,17 @@ public class ParallelNodeInstanceHandler implements CustomOperationHandler {
             if (parallelNodeInstancePO == null || null == parallelNodeInstancePO.getExecuteId()) {
                 return;
             }
-            mapper.updateById(parallelNodeInstancePO);
+            //修改新值
+            redis().save(parallelNodeInstancePO.getId(), parallelNodeInstancePO.getExecuteId());
+            //mapper.updateById(parallelNodeInstancePO);
         }
     }
 
     private void handleDelete(Object parameterObject, ParallelNodeInstanceMapper mapper) {
         if (parameterObject instanceof NodeInstancePO) {
             ParallelNodeInstancePO parallelNodeInstancePO = convertToParallelLog((NodeInstancePO) parameterObject);
-            if (parallelNodeInstancePO != null && null != parallelNodeInstancePO.getId())
-                mapper.deleteById(parallelNodeInstancePO.getId());
+//            if (parallelNodeInstancePO != null && null != parallelNodeInstancePO.getId())
+//                mapper.deleteById(parallelNodeInstancePO.getId());
         }
     }
 
@@ -96,11 +113,16 @@ public class ParallelNodeInstanceHandler implements CustomOperationHandler {
             List<NodeInstancePO> nodeInstancePOList = (List<NodeInstancePO>) originalResult;
             nodeInstancePOList.forEach(nodeInstancePO -> {
                 try {
-                    ParallelNodeInstancePO parallelNodeInstancePO = mapper.selectById(nodeInstancePO.getId());
-                    if (parallelNodeInstancePO != null) {
+                    //查询parallelNodeInstancePO
+                    ParallelNodeInstancePO parallelNodeInstancePO=new ParallelNodeInstancePO();
+                    parallelNodeInstancePO.setId(String.valueOf(nodeInstancePO.getId()));
+                    String executeId =redis().get(String.valueOf(nodeInstancePO.getId()));
+                    if (StringUtils.isNotBlank(executeId)){
+                        parallelNodeInstancePO.setExecuteId(executeId);
                         Map<String, Object> properties = MapToObjectConverter.convertObjectToMap(parallelNodeInstancePO);
                         nodeInstancePO.getProperties().putAll(properties);
                     }
+                    //ParallelNodeInstancePO parallelNodeInstancePO = mapper.selectById(nodeInstancePO.getId());
                 } catch (IllegalAccessException e) {
                     LOGGER.error("Error converting ParallelNodeInstancePO to map. ID={}", nodeInstancePO.getId(), e);
                 }
@@ -114,7 +136,7 @@ public class ParallelNodeInstanceHandler implements CustomOperationHandler {
             if (StringUtils.isBlank(parallelNodeInstancePO.getExecuteId())) {
                 return null;
             }
-            parallelNodeInstancePO.setId(nodeInstancePO.getId());
+            parallelNodeInstancePO.setId(String.valueOf(nodeInstancePO.getId()));
             return parallelNodeInstancePO;
         } catch (IllegalAccessException | InstantiationException e) {
             LOGGER.error("Error converting NodeInstancePO to ParallelNodeInstancePO. ID={}", nodeInstancePO.getId(), e);
