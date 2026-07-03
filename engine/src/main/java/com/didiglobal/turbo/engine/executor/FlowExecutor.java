@@ -290,11 +290,17 @@ public class FlowExecutor extends RuntimeExecutor {
         } catch (ReentrantException re) {
             //ignore
         } catch (ProcessException pe) {
-            if (!ErrorEnum.isSuccess(pe.getErrNo())) {
-                processStatus = ProcessStatus.FAILED;
-                processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
+            // 网关中断异常只结束循环，不继续抛出
+            if (1601 == pe.getErrNo()) {
+                LOGGER.info("忽略jion合并等待异常");
+                processStatus = ProcessStatus.SUCCESS;
+            } else {
+                if (!ErrorEnum.isSuccess(pe.getErrNo())) {
+                    processStatus = ProcessStatus.FAILED;
+                    processInstanceDAO.updateStatus(runtimeContext.getFlowInstanceId(), FlowInstanceStatus.FAILED);
+                }
+                throw pe;
             }
-            throw pe;
         } catch (Exception e) {
             processStatus = ProcessStatus.FAILED;
             processInstanceDAO.updateErrorMsg(runtimeContext.getFlowInstanceId(), e);
